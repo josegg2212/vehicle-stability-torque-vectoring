@@ -1,0 +1,14 @@
+output_signal,output_unit,output_description
+x,m,Global longitudinal position
+y,m,Global lateral position
+psi,rad,Vehicle heading angle
+Vx,m/s,Longitudinal vehicle speed
+Vy,m/s,Lateral vehicle speed
+beta,rad,Vehicle sideslip angle
+r,rad/s,Yaw rate
+ay,m/s^2,Lateral acceleration
+Mz_cmd,N*m,Corrective yaw moment command
+T_FL,N*m,Front-left wheel torque
+T_FR,N*m,Front-right wheel torque
+T_RL,N*m,Rear-left wheel torque
+T_RR,N*m,Rear-right wheel torque

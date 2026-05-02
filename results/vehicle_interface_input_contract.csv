@@ -1,0 +1,5 @@
+input_signal,input_unit,input_description
+delta,rad,Steering angle input for the manoeuvre
+mu,-,Road friction coefficient
+T_driver_total,N*m,Total driver torque demand
+y_ref,m,Lateral reference trajectory

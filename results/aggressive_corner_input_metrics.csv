@@ -1,0 +1,2 @@
+scenario,duration_s,max_abs_delta_deg,min_mu,mean_T_driver_total_Nm
+aggressive_corner,20,8,0.9,1200
