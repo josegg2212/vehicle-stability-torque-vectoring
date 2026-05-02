@@ -119,7 +119,7 @@ sgtitle("Vehicle response - " + selected_scenario + " - " + control_case_name, .
 
 %% Save figure
 
-results_folder = fullfile("results", "vehicle_stub", "plots");
+results_folder = fullfile("results", "full_system", "plots");
 
 if ~exist(results_folder, "dir")
     mkdir(results_folder);

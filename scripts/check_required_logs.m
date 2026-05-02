@@ -21,6 +21,11 @@ required_signals = [
     "logs_T_FR"
     "logs_T_RL"
     "logs_T_RR"
+    "logs_Mz_applied"
+    "logs_Mz_to_plant"
+    "logs_T_left_total"
+    "logs_T_right_total"
+    "logs_delta_T_lr"
 ];
 
 has_signal = false(numel(required_signals), 1);
