@@ -1,7 +1,5 @@
 function report = check_required_logs(out)
 %CHECK_REQUIRED_LOGS Checks that all required logged signals exist.
-%
-% This is useful before replacing the Vehicle Stub with the real vehicle model.
 
 required_signals = [
     "logs_delta"
@@ -63,7 +61,7 @@ report = table(required_signals(:), has_signal, num_samples, status, ...
 disp(report);
 
 if all(has_signal)
-    disp("All required logged signals are available.");
+    disp("All required full_system logged signals are available.");
 else
     warning("Some required logged signals are missing.");
 end

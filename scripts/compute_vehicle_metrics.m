@@ -1,8 +1,5 @@
 function metrics = compute_vehicle_metrics(out, selected_scenario, control_case)
 %COMPUTE_VEHICLE_METRICS Computes vehicle response metrics.
-%
-% This version works with the current Vehicle Stub.
-% Later, the same function will be used with the real vehicle model.
 
 if nargin < 3
     control_case = 0;

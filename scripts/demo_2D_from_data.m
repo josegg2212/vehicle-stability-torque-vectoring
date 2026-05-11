@@ -4,7 +4,7 @@
 % No calcula la trayectoria ni el reparto de par: solo carga señales y las visualiza.
 %
 % Archivo de entrada esperado:
-%   ../results/runs/demo_2D_input_data.mat
+%   results/runs/demo_2D_input_data.mat
 %
 % Variables mínimas esperadas:
 %   t, x, y, psi
@@ -17,19 +17,29 @@
 % Variables opcionales:
 %   beta, r, ay
 
-clear; clc; close all;
+clearvars;
+clc;
+close all;
 
-% Inicializar el proyecto
-run('../init/init_project.m');
+%% Robust project paths
+
+script_dir = fileparts(mfilename('fullpath'));
+project_root = fileparts(script_dir);
+
+addpath(fullfile(project_root, 'init'));
+addpath(fullfile(project_root, 'scripts'));
+
+% Only load demo visual parameters
+run(fullfile(project_root, 'init', 'init_demo_params.m'));
 
 %% Cargar datos de entrada
 
-input_file = '../results/runs/demo_2D_input_data.mat';
+input_file = fullfile(project_root, 'results', 'runs', 'demo_2D_input_data.mat');
 
 if ~exist(input_file, 'file')
     error(['No se ha encontrado el archivo de entrada: ', input_file, ...
            newline, ...
-           'Ejecuta primero create_demo_2D_input_from_synthetic.m o genera el archivo con datos reales.']);
+           'Ejecuta primero scripts/export_demo_2D_input_data_from_full_system.m.']);
 end
 
 load(input_file);
@@ -112,8 +122,10 @@ end
 
 %% Crear carpetas de resultados si no existen
 
-if ~exist('../results/figures', 'dir')
-    mkdir('../results/figures');
+figures_folder = fullfile(project_root, 'results', 'figures');
+
+if ~exist(figures_folder, 'dir')
+    mkdir(figures_folder);
 end
 
 %% Guardar figura estática de trayectoria
@@ -126,7 +138,7 @@ ylabel('y [m]');
 title('Trayectoria cargada para la demo 2D');
 axis equal;
 
-saveas(gcf, '../results/figures/demo_2D_from_data_trajectory.png');
+saveas(gcf, fullfile(figures_folder, 'demo_2D_from_data_trajectory.png'));
 
 %% Crear figura principal de animación
 

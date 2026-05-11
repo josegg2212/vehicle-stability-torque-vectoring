@@ -52,7 +52,7 @@ for i = 1:numel(scenario_list)
         disp("========================================");
 
         %% Load selected scenario
-        init_scenario_test;
+        run(fullfile(fileparts(mfilename("fullpath")), "init_full_system_scenario.m"));
 
         %% Send control case to Simulink workspace
         assignin("base", "control_case", control_case);

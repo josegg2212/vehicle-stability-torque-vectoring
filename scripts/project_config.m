@@ -1,24 +1,25 @@
 function config = project_config()
-%PROJECT_CONFIG Central configuration for the vehicle control project.
-%
-% Change only this file when switching from the Vehicle Stub model
-% to the real integrated vehicle model.
+
+%PROJECT_CONFIG Central configuration for the integrated vehicle control project.
+
+% Scripts folder and project root
+scripts_folder = fileparts(mfilename("fullpath"));
+project_root = fileparts(scripts_folder);
 
 %% Simulink model
-
-config.model_name = "scenario_test";
+config.model_name = "full_system";
 
 %% Results folders
-
-config.results_root = "results";
+config.project_root = project_root;
+config.results_root = fullfile(project_root, "results");
+config.runs_folder = fullfile(config.results_root, "runs");
+config.figures_folder = fullfile(config.results_root, "figures");
 
 config.input_checks_folder = fullfile(config.results_root, "input_checks");
-config.vehicle_stub_folder = fullfile(config.results_root, "vehicle_stub");
-config.vehicle_plots_folder = fullfile(config.vehicle_stub_folder, "plots");
-config.vehicle_comparisons_folder = fullfile(config.vehicle_stub_folder, "comparisons");
 
-%% Current model mode
-
-config.using_vehicle_stub = true;
+config.full_system_folder = fullfile(config.results_root, "full_system");
+config.vehicle_plots_folder = fullfile(config.full_system_folder, "plots");
+config.vehicle_comparisons_folder = fullfile(config.full_system_folder, "comparisons");
+config.vehicle_metrics_folder = fullfile(config.full_system_folder, "metrics");
 
 end

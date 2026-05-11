@@ -17,7 +17,8 @@ Mz_max = 20000;         % Maximum corrective yaw moment [N*m]
 Mz_min = -Mz_max;
 
 % Small numerical protection
-tf1 = 1.65;
+tf = 1.65;
+tf1 = tf;  % Backward compatibility
 tr = 1.65;
 rw = 0.363;
 

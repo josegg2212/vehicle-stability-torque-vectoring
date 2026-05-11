@@ -19,7 +19,7 @@ config = project_config();
 model_name = config.model_name;
 
 %% Load selected scenario
-init_scenario_test;
+run(fullfile(fileparts(mfilename("fullpath")), "scripts", "init_full_system_scenario.m"));
 
 %% Run Simulink model
 out = sim(model_name, "StopTime", "Tend");

@@ -1,7 +1,5 @@
 function plot_vehicle_response(out, selected_scenario, control_case)
-%PLOT_VEHICLE_RESPONSE Plots vehicle response signals.
-%
-% This works now with the Vehicle Stub and later with the real vehicle model.
+%PLOT_VEHICLE_RESPONSE Plots vehicle response signals for full_system runs.
 
 if nargin < 3
     control_case = 0;
@@ -19,42 +17,47 @@ switch control_case
 end
 
 %% Time vector
-
 t = out.logs_x.Time(:);
 N = length(t);
 
-%% Read signals
+%% Read signals (robust to scalar logs and missing channels)
+x = get_logged_signal(out, "logs_x", N);
+y = get_logged_signal(out, "logs_y", N);
+y_ref = get_logged_signal(out, "logs_y_ref", N);
 
-x      = expand_signal(out.logs_x.Data, N);
-y      = expand_signal(out.logs_y.Data, N);
-y_ref  = expand_signal(out.logs_y_ref.Data, N);
+Vx = get_logged_signal(out, "logs_Vx", N);
+Vy = get_logged_signal(out, "logs_Vy", N);
+psi = get_logged_signal(out, "logs_psi", N); %#ok<NASGU>
 
-psi    = expand_signal(out.logs_psi.Data, N);
-Vx     = expand_signal(out.logs_Vx.Data, N);
-Vy     = expand_signal(out.logs_Vy.Data, N);
+beta = get_logged_signal(out, "logs_beta", N);
+r = get_logged_signal(out, "logs_r", N);
+ay = get_logged_signal(out, "logs_ay", N);
 
-beta   = expand_signal(out.logs_beta.Data, N);
-r      = expand_signal(out.logs_r.Data, N);
-ay     = expand_signal(out.logs_ay.Data, N);
-Mz_cmd = expand_signal(out.logs_Mz_cmd.Data, N);
+delta = get_logged_signal(out, "logs_delta", N); %#ok<NASGU>
+mu = get_logged_signal(out, "logs_mu", N); %#ok<NASGU>
+T_driver_total = get_logged_signal(out, "logs_T_driver_total", N);
 
-T_FL   = expand_signal(out.logs_T_FL.Data, N);
-T_FR   = expand_signal(out.logs_T_FR.Data, N);
-T_RL   = expand_signal(out.logs_T_RL.Data, N);
-T_RR   = expand_signal(out.logs_T_RR.Data, N);
+T_FL = get_logged_signal(out, "logs_T_FL", N);
+T_FR = get_logged_signal(out, "logs_T_FR", N);
+T_RL = get_logged_signal(out, "logs_T_RL", N);
+T_RR = get_logged_signal(out, "logs_T_RR", N);
+T_left_total = get_logged_signal(out, "logs_T_left_total", N);
+T_right_total = get_logged_signal(out, "logs_T_right_total", N);
+delta_T_lr = get_logged_signal(out, "logs_delta_T_lr", N);
+
+[Mz_plot, mz_source_label, mz_plot_title] = select_yaw_moment_for_plot(out, N);
 
 %% Create figure
-
 fig = figure("Name", "Vehicle response - " + selected_scenario);
 
-subplot(4,2,1)
+subplot(5,2,1)
 plot(x, y, "LineWidth", 1.5)
 grid on
 xlabel("x [m]")
 ylabel("y [m]")
 title("Trajectory x-y")
 
-subplot(4,2,2)
+subplot(5,2,2)
 plot(t, y_ref, "--", "LineWidth", 1.5)
 hold on
 plot(t, y, "LineWidth", 1.5)
@@ -62,37 +65,38 @@ grid on
 xlabel("Time [s]")
 ylabel("y [m]")
 title("Lateral position")
-legend("y_{ref}", "y", "Location", "best")
+legend("y_ref", "y", "Location", "best")
 
-subplot(4,2,3)
+subplot(5,2,3)
 plot(t, rad2deg(beta), "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
-ylabel("\beta [deg]")
+ylabel("beta [deg]")
 title("Sideslip angle")
 
-subplot(4,2,4)
+subplot(5,2,4)
 plot(t, r, "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
 ylabel("r [rad/s]")
 title("Yaw rate")
 
-subplot(4,2,5)
+subplot(5,2,5)
 plot(t, ay, "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
 ylabel("a_y [m/s^2]")
 title("Lateral acceleration")
 
-subplot(4,2,6)
-plot(t, Mz_cmd, "LineWidth", 1.5)
+subplot(5,2,6)
+plot(t, Mz_plot, "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
-ylabel("M_z [N·m]")
-title("Corrective yaw moment")
+ylabel("M_z [N*m]")
+title(mz_plot_title)
+legend(mz_source_label, "Interpreter", "none", "Location", "best")
 
-subplot(4,2,7)
+subplot(5,2,7)
 plot(t, Vx, "LineWidth", 1.5)
 hold on
 plot(t, Vy, "LineWidth", 1.5)
@@ -102,7 +106,7 @@ ylabel("Velocity [m/s]")
 title("Vehicle velocities")
 legend("V_x", "V_y", "Location", "best")
 
-subplot(4,2,8)
+subplot(5,2,8)
 plot(t, T_FL, "LineWidth", 1.5)
 hold on
 plot(t, T_FR, "LineWidth", 1.5)
@@ -110,16 +114,34 @@ plot(t, T_RL, "LineWidth", 1.5)
 plot(t, T_RR, "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
-ylabel("Torque [N·m]")
+ylabel("Torque [N*m]")
 title("Wheel torques")
-legend("T_{FL}", "T_{FR}", "T_{RL}", "T_{RR}", "Location", "best")
+legend("T_FL", "T_FR", "T_RL", "T_RR", "Location", "best")
+
+subplot(5,2,9)
+plot(t, T_driver_total, "LineWidth", 1.5)
+grid on
+xlabel("Time [s]")
+ylabel("T_driver,total [N*m]")
+title("Driver total torque demand")
+
+subplot(5,2,10)
+plot(t, T_left_total, "LineWidth", 1.5)
+hold on
+plot(t, T_right_total, "LineWidth", 1.5)
+plot(t, delta_T_lr, "--", "LineWidth", 1.5)
+grid on
+xlabel("Time [s]")
+ylabel("Torque [N*m]")
+title("Left/right total torque and delta")
+legend("T_left_total", "T_right_total", "delta_T_lr", "Location", "best")
 
 sgtitle("Vehicle response - " + selected_scenario + " - " + control_case_name, ...
     "Interpreter", "none")
 
 %% Save figure
-
-results_folder = fullfile("results", "full_system", "plots");
+config = project_config();
+results_folder = config.vehicle_plots_folder;
 
 if ~exist(results_folder, "dir")
     mkdir(results_folder);
@@ -141,8 +163,54 @@ disp(" - " + string(file_name_fig));
 end
 
 
-function signal = expand_signal(raw_data, N)
-%EXPAND_SIGNAL Makes scalar signals compatible with time vector length.
+function signal = get_logged_signal(out, signal_name, N)
+%GET_LOGGED_SIGNAL Returns a column vector with length N.
+
+try
+    sig = out.get(char(signal_name));
+    signal = normalize_logged_signal(sig.Data, N);
+catch
+    signal = zeros(N, 1);
+end
+
+end
+
+
+function [Mz_signal, source_label, plot_title] = select_yaw_moment_for_plot(out, N)
+%SELECT_YAW_MOMENT_FOR_PLOT Chooses the yaw-moment channel to display.
+
+if has_log(out, "logs_Mz_to_plant")
+    Mz_signal = get_logged_signal(out, "logs_Mz_to_plant", N);
+    source_label = "logs_Mz_to_plant";
+    plot_title = "Applied yaw moment (to plant)";
+elseif has_log(out, "logs_Mz_applied")
+    Mz_signal = get_logged_signal(out, "logs_Mz_applied", N);
+    source_label = "logs_Mz_applied";
+    plot_title = "Applied yaw moment";
+else
+    Mz_signal = get_logged_signal(out, "logs_Mz_cmd", N);
+    source_label = "logs_Mz_cmd";
+    plot_title = "Requested yaw moment";
+end
+
+end
+
+
+function tf = has_log(out, signal_name)
+%HAS_LOG True when a logged signal is available in SimulationOutput.
+
+try
+    out.get(char(signal_name));
+    tf = true;
+catch
+    tf = false;
+end
+
+end
+
+
+function signal = normalize_logged_signal(raw_data, N)
+%NORMALIZE_LOGGED_SIGNAL Converts Simulink data into a column vector length N.
 
 signal = squeeze(raw_data);
 signal = signal(:);

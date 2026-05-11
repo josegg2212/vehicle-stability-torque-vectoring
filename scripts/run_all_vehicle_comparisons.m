@@ -4,6 +4,16 @@
 clc;
 close all;
 
+%% Locate project root and initialize
+this_script = mfilename("fullpath");
+scripts_folder = fileparts(this_script);
+project_root = fileparts(scripts_folder);
+
+cd(project_root);
+addpath(scripts_folder);
+
+run(fullfile(project_root, "init", "init_project_final.m"));
+
 %% Scenario list
 scenario_list = [
     "double_lane_change"
@@ -27,4 +37,5 @@ end
 
 disp("========================================");
 disp("All vehicle comparison plots generated.");
+disp("Saved in: " + string(fullfile(project_root, "results", "full_system", "comparisons")));
 disp("========================================");

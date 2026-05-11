@@ -1,16 +1,12 @@
 function plot_vehicle_comparison_for_scenario(selected_scenario)
 %PLOT_VEHICLE_COMPARISON_FOR_SCENARIO Runs one scenario in all control cases
-% and plots comparison figures.
-%
-% This works now with the Vehicle Stub.
-% Later, it will be used with the real vehicle model.
+% and generates comparison figures.
 
 %% Project configuration
-
 config = project_config();
 model_name = config.model_name;
-%% Control cases
 
+%% Control cases
 control_case_list = [0 1 2];
 control_case_names = [
     "without_control"
@@ -19,11 +15,10 @@ control_case_names = [
 ];
 
 %% Storage
-
 results = struct();
+yaw_sources = strings(numel(control_case_list), 1);
 
 %% Run cases
-
 for j = 1:numel(control_case_list)
 
     control_case = control_case_list(j);
@@ -34,7 +29,7 @@ for j = 1:numel(control_case_list)
     disp("Control case: " + control_case_name);
 
     %% Load scenario
-    init_scenario_test;
+    run(fullfile(config.project_root, "scripts", "init_full_system_scenario.m"));
 
     %% Send control case to workspace
     assignin("base", "control_case", control_case);
@@ -43,18 +38,17 @@ for j = 1:numel(control_case_list)
     out = sim(model_name, "StopTime", "Tend");
 
     %% Store output
-    results(j).control_case = control_case;
-    results(j).control_case_name = control_case_name;
-    results(j).out = out;
+    results(j).control_case = control_case; %#ok<AGROW>
+    results(j).control_case_name = control_case_name; %#ok<AGROW>
+    results(j).out = out; %#ok<AGROW>
+    yaw_sources(j) = preferred_yaw_signal_name(out);
 
 end
 
 %% Create comparison figure
-
 fig = figure("Name", "Vehicle comparison - " + selected_scenario);
 
 %% 1. Trajectory
-
 subplot(4,2,1)
 hold on; grid on;
 
@@ -63,8 +57,8 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    x = vectorize_signal(out.logs_x.Data, N);
-    y = vectorize_signal(out.logs_y.Data, N);
+    x = get_logged_signal(out, "logs_x", N);
+    y = get_logged_signal(out, "logs_y", N);
 
     plot(x, y, "LineWidth", 1.5);
 end
@@ -75,7 +69,6 @@ title("Trajectory x-y");
 legend(control_case_names, "Interpreter", "none", "Location", "best");
 
 %% 2. y_ref vs y
-
 subplot(4,2,2)
 hold on; grid on;
 
@@ -83,13 +76,12 @@ out0 = results(1).out;
 t = out0.logs_x.Time(:);
 N = length(t);
 
-y_ref = vectorize_signal(out0.logs_y_ref.Data, N);
-
+y_ref = get_logged_signal(out0, "logs_y_ref", N);
 plot(t, y_ref, "k--", "LineWidth", 1.5);
 
 for j = 1:numel(results)
     out = results(j).out;
-    y = vectorize_signal(out.logs_y.Data, N);
+    y = get_logged_signal(out, "logs_y", N);
     plot(t, y, "LineWidth", 1.5);
 end
 
@@ -99,7 +91,6 @@ title("Lateral position");
 legend(["y_ref"; control_case_names(:)], "Interpreter", "none", "Location", "best");
 
 %% 3. beta
-
 subplot(4,2,3)
 hold on; grid on;
 
@@ -108,18 +99,17 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    beta = vectorize_signal(out.logs_beta.Data, N);
+    beta = get_logged_signal(out, "logs_beta", N);
 
     plot(t, rad2deg(beta), "LineWidth", 1.5);
 end
 
 xlabel("Time [s]");
-ylabel("\beta [deg]");
+ylabel("beta [deg]");
 title("Sideslip angle");
 legend(control_case_names, "Interpreter", "none", "Location", "best");
 
 %% 4. yaw rate
-
 subplot(4,2,4)
 hold on; grid on;
 
@@ -128,7 +118,7 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    r = vectorize_signal(out.logs_r.Data, N);
+    r = get_logged_signal(out, "logs_r", N);
 
     plot(t, r, "LineWidth", 1.5);
 end
@@ -139,7 +129,6 @@ title("Yaw rate");
 legend(control_case_names, "Interpreter", "none", "Location", "best");
 
 %% 5. lateral acceleration
-
 subplot(4,2,5)
 hold on; grid on;
 
@@ -148,7 +137,7 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    ay = vectorize_signal(out.logs_ay.Data, N);
+    ay = get_logged_signal(out, "logs_ay", N);
 
     plot(t, ay, "LineWidth", 1.5);
 end
@@ -158,8 +147,7 @@ ylabel("a_y [m/s^2]");
 title("Lateral acceleration");
 legend(control_case_names, "Interpreter", "none", "Location", "best");
 
-%% 6. corrective yaw moment
-
+%% 6. yaw moment
 subplot(4,2,6)
 hold on; grid on;
 
@@ -168,18 +156,24 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    Mz_cmd = vectorize_signal(out.logs_Mz_cmd.Data, N);
-
-    plot(t, Mz_cmd, "LineWidth", 1.5);
+    Mz = get_logged_signal(out, preferred_yaw_signal_name(out), N);
+    plot(t, Mz, "LineWidth", 1.5);
 end
 
 xlabel("Time [s]");
-ylabel("M_z [N·m]");
-title("Corrective yaw moment");
+ylabel("M_z [N*m]");
+
+if all(yaw_sources == "logs_Mz_to_plant")
+    title("Yaw moment applied to plant");
+elseif all(yaw_sources == "logs_Mz_cmd")
+    title("Requested yaw moment");
+else
+    title("Yaw moment (to plant preferred)");
+end
+
 legend(control_case_names, "Interpreter", "none", "Location", "best");
 
 %% 7. vehicle velocities
-
 subplot(4,2,7)
 hold on; grid on;
 
@@ -188,8 +182,8 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    Vx = vectorize_signal(out.logs_Vx.Data, N);
-    Vy = vectorize_signal(out.logs_Vy.Data, N);
+    Vx = get_logged_signal(out, "logs_Vx", N);
+    Vy = get_logged_signal(out, "logs_Vy", N);
 
     plot(t, Vx, "LineWidth", 1.5);
     plot(t, Vy, "--", "LineWidth", 1.5);
@@ -207,7 +201,6 @@ legend( ...
 );
 
 %% 8. wheel torques
-
 subplot(4,2,8)
 hold on; grid on;
 
@@ -216,10 +209,10 @@ for j = 1:numel(results)
     t = out.logs_x.Time(:);
     N = length(t);
 
-    T_FL = vectorize_signal(out.logs_T_FL.Data, N);
-    T_FR = vectorize_signal(out.logs_T_FR.Data, N);
-    T_RL = vectorize_signal(out.logs_T_RL.Data, N);
-    T_RR = vectorize_signal(out.logs_T_RR.Data, N);
+    T_FL = get_logged_signal(out, "logs_T_FL", N);
+    T_FR = get_logged_signal(out, "logs_T_FR", N);
+    T_RL = get_logged_signal(out, "logs_T_RL", N);
+    T_RR = get_logged_signal(out, "logs_T_RR", N);
 
     plot(t, T_FL, "LineWidth", 1.5);
     plot(t, T_FR, "LineWidth", 1.5);
@@ -228,7 +221,7 @@ for j = 1:numel(results)
 end
 
 xlabel("Time [s]");
-ylabel("Torque [N·m]");
+ylabel("Torque [N*m]");
 title("Wheel torques");
 legend( ...
     "FL without", "FR without", "RL without", "RR without", ...
@@ -241,8 +234,7 @@ legend( ...
 sgtitle("Vehicle comparison - " + selected_scenario, "Interpreter", "none");
 
 %% Save figure
-
-results_folder = fullfile("results", "vehicle_stub", "comparisons");
+results_folder = config.vehicle_comparisons_folder;
 
 if ~exist(results_folder, "dir")
     mkdir(results_folder);
@@ -261,8 +253,48 @@ disp(" - " + string(file_name_fig));
 end
 
 
-function signal = vectorize_signal(raw_data, N)
-%VECTORIZE_SIGNAL Converts Simulink logged data to a column vector.
+function signal = get_logged_signal(out, signal_name, N)
+%GET_LOGGED_SIGNAL Returns signal_name as a column vector of length N.
+
+try
+    sig = out.get(char(signal_name));
+    signal = normalize_logged_signal(sig.Data, N);
+catch
+    signal = zeros(N, 1);
+end
+
+end
+
+
+function signal_name = preferred_yaw_signal_name(out)
+%PREFERRED_YAW_SIGNAL_NAME Chooses the best yaw-moment signal for plotting.
+
+if has_log(out, "logs_Mz_to_plant")
+    signal_name = "logs_Mz_to_plant";
+elseif has_log(out, "logs_Mz_applied")
+    signal_name = "logs_Mz_applied";
+else
+    signal_name = "logs_Mz_cmd";
+end
+
+end
+
+
+function tf = has_log(out, signal_name)
+%HAS_LOG True when a logged signal exists in SimulationOutput.
+
+try
+    out.get(char(signal_name));
+    tf = true;
+catch
+    tf = false;
+end
+
+end
+
+
+function signal = normalize_logged_signal(raw_data, N)
+%NORMALIZE_LOGGED_SIGNAL Converts Simulink data to column vector length N.
 
 signal = squeeze(raw_data);
 signal = signal(:);
