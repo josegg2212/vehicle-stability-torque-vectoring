@@ -1,0 +1,28 @@
+# MATLAB / Simulink generated cache files
+slprj/
+*.slxc
+*.slx.r20*
+*.asv
+*.m~
+*.autosave
+
+# Simulink code generation folders
+codegen/
+*_ert_rtw/
+*_grt_rtw/
+*_slprj/
+
+# Old/obsolete generated results
+results/vehicle_stub/
+scripts/results/
+scripts/slprj/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Do NOT ignore final results
+# results/full_system/
+# results/runs/
+# results/figures/

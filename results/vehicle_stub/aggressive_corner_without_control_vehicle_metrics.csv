@@ -1,2 +1,0 @@
-scenario,control_case,control_case_name,duration_s,final_x_m,final_y_m,final_psi_deg,max_abs_y_error_m,rms_y_error_m,mean_Vx_m_s,max_abs_Vy_m_s,max_abs_beta_deg,max_abs_r_rad_s,max_abs_ay_m_s2,max_abs_Mz_cmd_Nm,control_effort_Mz_Nm_s,mean_total_wheel_torque_Nm,max_abs_wheel_torque_Nm,max_abs_T_FL_Nm,max_abs_T_FR_Nm,max_abs_T_RL_Nm,max_abs_T_RR_Nm,max_abs_torque_difference_RL_Nm,time_beta_over_3deg_s
-aggressive_corner,0,without_control,20,440,0,456.130073862457,0,0,22,0.10471975511966,1.2,0.418879020478639,3.49065850398866,0,0,1200,300,300,300,300,300,0,0

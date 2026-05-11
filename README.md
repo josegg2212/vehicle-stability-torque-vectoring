@@ -8,6 +8,7 @@ El proyecto integra:
 - Control de estabilidad en guinada y sideslip.
 - Reparto de par izquierda-derecha para generar momento de guinada.
 - Simulacion de tres escenarios de maniobra con tres modos de control.
+- Modelo principal unico: `full_system.slx` en la raiz del repositorio.
 
 ## Estructura de carpetas
 
@@ -52,5 +53,9 @@ El proyecto integra:
 ## Nota sobre low_mu_lane_change
 
 `low_mu_lane_change` genera la senal `mu`, pero en la version actual del modelo lineal `mu` todavia no modifica la dinamica ni limita los pares, por lo que sus resultados pueden coincidir con `double_lane_change`.
+
+## Nota sobre resultados incluidos
+
+Los resultados finales se conservan en el repositorio para facilitar la revision, pero pueden regenerarse completamente ejecutando la secuencia de scripts indicada arriba.
 
 
