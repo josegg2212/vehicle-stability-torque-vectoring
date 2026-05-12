@@ -22,10 +22,13 @@ config = project_config();
 model_name = config.model_name;
 
 %% Select demo case
-% Recommended first demo:
 % aggressive_corner + torque_vectoring
-selected_scenario = "aggressive_corner";
-control_case = 2;
+selected_scenario = "double_lane_change";
+%selected_scenario = "aggressive_corner";
+%selected_scenario = "low_mu_lane_change";
+%control_case = 0;   % without_control
+%control_case = 1;   % stability_control
+control_case = 2;   % torque_vectoring
 
 assignin("base", "selected_scenario", selected_scenario);
 assignin("base", "control_case", control_case);
