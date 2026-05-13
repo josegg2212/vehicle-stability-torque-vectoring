@@ -45,7 +45,8 @@ T_left_total = get_logged_signal(out, "logs_T_left_total", N);
 T_right_total = get_logged_signal(out, "logs_T_right_total", N);
 delta_T_lr = get_logged_signal(out, "logs_delta_T_lr", N);
 
-[Mz_plot, mz_source_label, mz_plot_title] = select_yaw_moment_for_plot(out, N);
+Mz_cmd = get_logged_signal(out, "logs_Mz_cmd", N);
+Mz_applied = get_logged_signal(out, "logs_Mz_applied", N);
 
 %% Create figure
 fig = figure("Name", "Vehicle response - " + selected_scenario);
@@ -89,12 +90,14 @@ ylabel("a_y [m/s^2]")
 title("Lateral acceleration")
 
 subplot(5,2,6)
-plot(t, Mz_plot, "LineWidth", 1.5)
+plot(t, Mz_cmd, "LineWidth", 1.5)
+hold on
+plot(t, Mz_applied, "--", "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
 ylabel("M_z [N*m]")
-title(mz_plot_title)
-legend(mz_source_label, "Interpreter", "none", "Location", "best")
+title("Yaw moment command vs applied")
+legend("M_z,cmd", "M_z,applied", "Location", "best")
 
 subplot(5,2,7)
 plot(t, Vx, "LineWidth", 1.5)
@@ -119,11 +122,16 @@ title("Wheel torques")
 legend("T_FL", "T_FR", "T_RL", "T_RR", "Location", "best")
 
 subplot(5,2,9)
+yyaxis left
 plot(t, T_driver_total, "LineWidth", 1.5)
+ylabel("T_driver,total [N*m]")
+yyaxis right
+plot(t, mu, "--", "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
-ylabel("T_driver,total [N*m]")
-title("Driver total torque demand")
+ylabel("mu [-]")
+title("Driver total torque and road friction")
+legend("T_driver,total", "mu", "Location", "best")
 
 subplot(5,2,10)
 plot(t, T_left_total, "LineWidth", 1.5)
@@ -171,26 +179,6 @@ try
     signal = normalize_logged_signal(sig.Data, N);
 catch
     signal = zeros(N, 1);
-end
-
-end
-
-
-function [Mz_signal, source_label, plot_title] = select_yaw_moment_for_plot(out, N)
-%SELECT_YAW_MOMENT_FOR_PLOT Chooses the yaw-moment channel to display.
-
-if has_log(out, "logs_Mz_to_plant")
-    Mz_signal = get_logged_signal(out, "logs_Mz_to_plant", N);
-    source_label = "logs_Mz_to_plant";
-    plot_title = "Applied yaw moment (to plant)";
-elseif has_log(out, "logs_Mz_applied")
-    Mz_signal = get_logged_signal(out, "logs_Mz_applied", N);
-    source_label = "logs_Mz_applied";
-    plot_title = "Applied yaw moment";
-else
-    Mz_signal = get_logged_signal(out, "logs_Mz_cmd", N);
-    source_label = "logs_Mz_cmd";
-    plot_title = "Requested yaw moment";
 end
 
 end

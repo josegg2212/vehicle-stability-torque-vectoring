@@ -39,6 +39,9 @@ beta   = normalize_logged_signal(out.logs_beta.Data, N);
 r      = normalize_logged_signal(out.logs_r.Data, N);
 ay     = normalize_logged_signal(out.logs_ay.Data, N);
 Mz_cmd = normalize_logged_signal(out.logs_Mz_cmd.Data, N);
+mu     = get_logged_signal(out, "logs_mu", N, 0.9 * ones(N,1));
+Mz_applied = get_logged_signal(out, "logs_Mz_applied", N, zeros(N,1));
+T_driver_total = get_logged_signal(out, "logs_T_driver_total", N, zeros(N,1));
 
 T_FL   = normalize_logged_signal(out.logs_T_FL.Data, N);
 T_FR   = normalize_logged_signal(out.logs_T_FR.Data, N);
@@ -54,6 +57,7 @@ y_error = y_ref - y;
 torque_matrix = [T_FL, T_FR, T_RL, T_RR];
 
 total_wheel_torque = T_FL + T_FR + T_RL + T_RR;
+total_torque_saturation_error = total_wheel_torque - T_driver_total;
 
 left_torque = T_FL + T_RL;
 right_torque = T_FR + T_RR;
@@ -93,6 +97,9 @@ metrics.max_abs_ay_m_s2 = max(abs(ay));
 
 metrics.max_abs_Mz_cmd_Nm = max(abs(Mz_cmd));
 metrics.control_effort_Mz_Nm_s = trapz(t, abs(Mz_cmd));
+metrics.max_abs_Mz_applied_Nm = max(abs(Mz_applied));
+metrics.control_effort_Mz_applied_Nm_s = trapz(t, abs(Mz_applied));
+metrics.max_abs_Mz_tracking_error_Nm = max(abs(Mz_cmd - Mz_applied));
 
 %% Wheel torque metrics
 
@@ -105,6 +112,11 @@ metrics.max_abs_T_RL_Nm = max(abs(T_RL));
 metrics.max_abs_T_RR_Nm = max(abs(T_RR));
 
 metrics.max_abs_torque_difference_RL_Nm = max(abs(torque_difference_right_left));
+metrics.max_abs_total_torque_saturation_error_Nm = max(abs(total_torque_saturation_error));
+
+%% Friction metrics
+metrics.min_mu = min(mu);
+metrics.mean_mu = mean(mu);
 
 %% Time with beta over safety threshold
 
@@ -113,6 +125,7 @@ over_limit = abs(beta) > beta_limit_rad;
 
 dt = mean(diff(t));
 metrics.time_beta_over_3deg_s = sum(over_limit) * dt;
+metrics.time_abs_beta_above_3deg_s = metrics.time_beta_over_3deg_s;
 
 end
 
@@ -138,4 +151,14 @@ elseif length(signal) > N
     signal = signal(1:N);
 end
 
+end
+
+
+function signal = get_logged_signal(out, signal_name, N, fallback)
+%GET_LOGGED_SIGNAL Safe getter from SimulationOutput logs.
+try
+    signal = normalize_logged_signal(out.get(char(signal_name)).Data, N);
+catch
+    signal = fallback;
+end
 end

@@ -75,7 +75,8 @@ switch scenario_name
         scenario.delta_deg = [0 5 -5 3 0 0];        % [deg]
 
         % Road friction coefficient
-        scenario.t_mu = [0 4 12];                   % [s]
+        % Drop mu early so the low-friction phase overlaps the lane-change transient.
+        scenario.t_mu = [0 1 12];                   % [s]
         scenario.mu = [0.9 0.45 0.45];              % [-]
         
         % Lateral reference

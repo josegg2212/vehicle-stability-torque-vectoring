@@ -89,6 +89,10 @@ Car = 95000;    % N/rad
 
 Cf = 2*Caf;
 Cr = 2*Car;
+% Caf and Car are defined per wheel, so axle values are doubled.
+Cf_axle = 2*Caf;
+Cr_axle = 2*Car;
+Vx_min = 1.0;   % m/s, numerical protection for low speed
 
 Vx = 16;        % m/s
 

@@ -52,7 +52,7 @@ El proyecto integra:
 
 ## Nota sobre low_mu_lane_change
 
-`low_mu_lane_change` genera la senal `mu`, pero en la version actual del modelo lineal `mu` todavia no modifica la dinamica ni limita los pares, por lo que sus resultados pueden coincidir con `double_lane_change`.
+`low_mu_lane_change` uses a time-varying road friction coefficient. In the current model, `mu` limits the lateral tire forces in the bicycle model through a simple `mu*Fz` saturation and also limits the maximum transmissible torque per wheel through `mu*Fz*rw`. This is a simple friction-limited approximation, not a full Pacejka tire model.
 
 ## Nota sobre resultados incluidos
 
