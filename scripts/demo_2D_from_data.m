@@ -1,495 +1,487 @@
 % demo_2D_from_data.m
-% Demo 2D final alimentada desde un archivo .mat con datos ya generados.
-% Esta versión está preparada para integración con el modelo completo del grupo.
-% No calcula la trayectoria ni el reparto de par: solo carga señales y las visualiza.
-%
-% Archivo de entrada esperado:
-%   results/runs/demo_2D_input_data.mat
-%
-% Variables mínimas esperadas:
-%   t, x, y, psi
-%   Vx
-%   T_driver_total
-%   Mz_cmd, Mz_applied
-%   T_FL, T_FR, T_RL, T_RR
-%   T_left_total, T_right_total, delta_T_lr
-%
-% Variables opcionales:
-%   beta, r, ay
+% Visualiza una demo 2D usando datos ya exportados desde full_system.
+% Adapta titulos/paneles al escenario y modo de control del archivo cargado.
+% Dibuja una carretera alineada con la trayectoria para casos rectos y curvos.
 
-clearvars;
 clc;
 close all;
 
 %% Robust project paths
-
-script_dir = fileparts(mfilename('fullpath'));
+script_dir = fileparts(mfilename("fullpath"));
 project_root = fileparts(script_dir);
 
-addpath(fullfile(project_root, 'init'));
-addpath(fullfile(project_root, 'scripts'));
+addpath(fullfile(project_root, "init"));
+addpath(fullfile(project_root, "scripts"));
 
-% Only load demo visual parameters
-run(fullfile(project_root, 'init', 'init_demo_params.m'));
+run(fullfile(project_root, "init", "init_demo_params.m"));
 
-%% Cargar datos de entrada
-
-input_file = fullfile(project_root, 'results', 'runs', 'demo_2D_input_data.mat');
-
-if ~exist(input_file, 'file')
-    error(['No se ha encontrado el archivo de entrada: ', input_file, ...
-           newline, ...
-           'Ejecuta primero scripts/export_demo_2D_input_data_from_full_system.m.']);
+%% Load input data
+input_file = fullfile(project_root, "results", "runs", "demo_2D_input_data.mat");
+if ~exist(input_file, "file")
+    error("No se ha encontrado el archivo de entrada: %s", input_file);
 end
 
 load(input_file);
 
-disp('Datos cargados correctamente para la demo 2D.');
-disp(['Archivo: ', input_file]);
+disp("Datos cargados correctamente para la demo 2D.");
+disp("Archivo: " + string(input_file));
 
-%% Comprobación de variables obligatorias
-
+%% Required signals
 required_vars = { ...
-    't', 'x', 'y', 'psi', ...
-    'Vx', ...
-    'T_driver_total', ...
-    'Mz_cmd', 'Mz_applied', ...
-    'T_FL', 'T_FR', 'T_RL', 'T_RR', ...
-    'T_left_total', 'T_right_total', 'delta_T_lr'};
+    "t", "x", "y", "psi", ...
+    "Vx", "T_driver_total", ...
+    "Mz_cmd", "Mz_applied", ...
+    "T_FL", "T_FR", "T_RL", "T_RR", ...
+    "T_left_total", "T_right_total", "delta_T_lr"};
 
-for i = 1:length(required_vars)
-    if ~exist(required_vars{i}, 'var')
-        error(['Falta la variable obligatoria: ', required_vars{i}]);
+for i = 1:numel(required_vars)
+    if ~exist(required_vars{i}, "var")
+        error("Falta la variable obligatoria: %s", required_vars{i});
     end
 end
 
-%% Asegurar formato de vectores fila
-
+%% Normalize vector shape
 t = t(:)';
 x = x(:)';
 y = y(:)';
 psi = psi(:)';
 
 Vx = Vx(:)';
-
 T_driver_total = T_driver_total(:)';
-
 Mz_cmd = Mz_cmd(:)';
 Mz_applied = Mz_applied(:)';
-
 T_FL = T_FL(:)';
 T_FR = T_FR(:)';
 T_RL = T_RL(:)';
 T_RR = T_RR(:)';
-
 T_left_total = T_left_total(:)';
 T_right_total = T_right_total(:)';
 delta_T_lr = delta_T_lr(:)';
 
-% Variables opcionales de estabilidad.
-% Si no existen, se crean como NaN para que la demo no falle.
-if ~exist('beta', 'var')
-    beta = NaN * ones(size(t));
-else
-    beta = beta(:)';
-end
-
-if ~exist('r', 'var')
-    r = NaN * ones(size(t));
-else
-    r = r(:)';
-end
-
-if ~exist('ay', 'var')
-    ay = NaN * ones(size(t));
-else
-    ay = ay(:)';
-end
-
-%% Comprobar longitud común
+if ~exist("beta", "var"), beta = NaN(size(t)); else, beta = beta(:)'; end
+if ~exist("r", "var"), r = NaN(size(t)); else, r = r(:)'; end
+if ~exist("ay", "var"), ay = NaN(size(t)); else, ay = ay(:)'; end
 
 N = length(t);
 
 signals_to_check = {x, y, psi, Vx, T_driver_total, Mz_cmd, Mz_applied, ...
-                    T_FL, T_FR, T_RL, T_RR, ...
-                    T_left_total, T_right_total, delta_T_lr};
-
-for i = 1:length(signals_to_check)
+                    T_FL, T_FR, T_RL, T_RR, T_left_total, T_right_total, delta_T_lr};
+for i = 1:numel(signals_to_check)
     if length(signals_to_check{i}) ~= N
-        error('Todas las señales deben tener la misma longitud que t.');
+        error("Todas las senales deben tener la misma longitud que t.");
     end
 end
 
-%% Crear carpetas de resultados si no existen
+%% Scenario/control metadata
+scenario_name = "unknown_scenario";
+if exist("selected_scenario", "var")
+    scenario_name = string(selected_scenario);
+end
 
-figures_folder = fullfile(project_root, 'results', 'figures');
+control_case_name = "unknown_control";
+if exist("control_case", "var")
+    control_case_name = control_case_to_name(control_case);
+end
 
-if ~exist(figures_folder, 'dir')
+scenario_label = scenario_to_spanish_label(scenario_name);
+control_label = control_to_spanish_label(control_case_name);
+
+main_title = "Demo 2D - " + scenario_label + " | " + control_label;
+subtitle_case = "Caso: " + scenario_name + " | control_case: " + control_case_name;
+
+%% Output folders and static trajectory figure
+figures_folder = fullfile(project_root, "results", "figures");
+if ~exist(figures_folder, "dir")
     mkdir(figures_folder);
 end
 
-%% Guardar figura estática de trayectoria
-
 figure;
-plot(x, y, 'LineWidth', 1.5);
+plot(x, y, "LineWidth", 1.5);
 grid on;
-xlabel('x [m]');
-ylabel('y [m]');
-title('Trayectoria cargada para la demo 2D');
+xlabel("x [m]");
+ylabel("y [m]");
+title("Trayectoria - " + scenario_label + " (" + control_case_name + ")");
 axis equal;
 
-saveas(gcf, fullfile(figures_folder, 'demo_2D_from_data_trajectory.png'));
+saveas(gcf, fullfile(figures_folder, "demo_2D_from_data_trajectory.png"));
 
-%% Crear figura principal de animación
+%% Visual configuration
+if ~exist("road_width", "var"), road_width = 7.0; end
+if ~exist("car_length", "var"), car_length = 4.7; end
+if ~exist("car_width", "var"), car_width = 1.9; end
 
-fig = figure('Name', 'Demo 2D desde datos - Reparto de par', ...
-    'Color', 'w', ...
-    'Position', [60 40 1500 820]);
-
-% Eje principal de carretera y animación
-axRoad = axes('Parent', fig, 'Position', [0.05 0.12 0.63 0.78]);
-
-% Eje exclusivo para texto del panel
-axInfo = axes('Parent', fig, 'Position', [0.72 0.55 0.25 0.35]);
-axis(axInfo, 'off');
-
-% Eje para barras de reparto lateral
-axSideTorque = axes('Parent', fig, 'Position', [0.74 0.34 0.22 0.14]);
-
-% Eje para barras de par por rueda
-axWheelTorque = axes('Parent', fig, 'Position', [0.74 0.12 0.22 0.16]);
-
-% Caja de estado inferior
-status_box = annotation(fig, 'textbox', [0.72 0.02 0.26 0.07], ...
-    'String', '', ...
-    'FitBoxToText', 'off', ...
-    'EdgeColor', [0.20 0.20 0.20], ...
-    'LineWidth', 1.2, ...
-    'BackgroundColor', [0.96 0.96 0.96], ...
-    'FontSize', 15, ...
-    'FontWeight', 'bold', ...
-    'FontName', 'Arial', ...
-    'Interpreter', 'none', ...
-    'VerticalAlignment', 'middle', ...
-    'HorizontalAlignment', 'center');
-
-% Título del panel lateral
-annotation(fig, 'textbox', [0.72 0.91 0.26 0.05], ...
-    'String', 'PANEL DE REPARTO DE PAR', ...
-    'FitBoxToText', 'off', ...
-    'EdgeColor', 'none', ...
-    'BackgroundColor', 'none', ...
-    'FontWeight', 'bold', ...
-    'FontSize', 18, ...
-    'FontName', 'Arial', ...
-    'Interpreter', 'none', ...
-    'HorizontalAlignment', 'center');
-
-%% Configuración visual
-
-% Si road_width, car_length o car_width no vinieran del init, se fijan valores de respaldo
-if ~exist('road_width', 'var')
-    road_width = 7.0;
-end
-
-if ~exist('car_length', 'var')
-    car_length = 4.7;
-end
-
-if ~exist('car_width', 'var')
-    car_width = 1.9;
-end
-
-% Límites verticales de la ventana
-y_margin = 3.0;
-y_min = min(y) - y_margin;
-y_max = max(y) + y_margin;
-
-% Evitar límites demasiado estrechos
-if (y_max - y_min) < 10
-    y_center = 0.5 * (y_max + y_min);
-    y_min = y_center - 5;
-    y_max = y_center + 5;
-end
-
-% Paso de animación
 frame_step = 5;
 
-% Límites de barras
 max_side_torque = max([abs(T_left_total), abs(T_right_total)]) * 1.20;
 max_wheel_torque = max(abs([T_FL, T_FR, T_RL, T_RR])) * 1.25;
+if max_side_torque == 0, max_side_torque = 1; end
+if max_wheel_torque == 0, max_wheel_torque = 1; end
 
-% Protección por si todas las señales fueran cero
-if max_side_torque == 0
-    max_side_torque = 1;
-end
-
-if max_wheel_torque == 0
-    max_wheel_torque = 1;
-end
-
-% Colores
-road_color = [0.92 0.92 0.92];
-trajectory_color = [0.70 0.70 0.70];
-
+road_color = [0.90 0.90 0.90];
+lane_color = [0.18 0.18 0.18];
+trajectory_color = [0.65 0.65 0.65];
 car_color_neutral = [0.10 0.30 0.90];
-car_color_right   = [0.05 0.45 0.85];
-car_color_left    = [0.90 0.35 0.10];
-
+car_color_right = [0.05 0.45 0.85];
+car_color_left = [0.90 0.35 0.10];
 bar_color = [0.12 0.47 0.71];
 
-%% Bucle de animación
+%% Fixed scenario road (independent from vehicle trajectory)
+road_params = struct();
+road_params.road_width = road_width;
+road_params.x_data = x;
+road_params.y_data = y;
+road_params.project_root = project_root;
+
+road_scene = drawScenarioRoad([], scenario_name, road_params, true);
+
+%% Main animation figure
+fig = figure("Name", "Demo 2D - Reparto de par", ...
+    "Color", "w", ...
+    "Position", [60 40 1500 820]);
+
+axRoad = axes("Parent", fig, "Position", [0.05 0.12 0.63 0.78]);
+axInfo = axes("Parent", fig, "Position", [0.72 0.55 0.25 0.35]); axis(axInfo, "off");
+axSideTorque = axes("Parent", fig, "Position", [0.74 0.34 0.22 0.14]);
+axWheelTorque = axes("Parent", fig, "Position", [0.74 0.12 0.22 0.16]);
+
+status_box = annotation(fig, "textbox", [0.72 0.02 0.26 0.07], ...
+    "String", "", ...
+    "FitBoxToText", "off", ...
+    "EdgeColor", [0.20 0.20 0.20], ...
+    "LineWidth", 1.2, ...
+    "BackgroundColor", [0.96 0.96 0.96], ...
+    "FontSize", 13, ...
+    "FontWeight", "bold", ...
+    "FontName", "Arial", ...
+    "Interpreter", "none", ...
+    "VerticalAlignment", "middle", ...
+    "HorizontalAlignment", "center");
+
+annotation(fig, "textbox", [0.72 0.91 0.26 0.06], ...
+    "String", "PANEL DE REPARTO DE PAR", ...
+    "FitBoxToText", "off", ...
+    "EdgeColor", "none", ...
+    "BackgroundColor", "none", ...
+    "FontWeight", "bold", ...
+    "FontSize", 16, ...
+    "FontName", "Arial", ...
+    "Interpreter", "none", ...
+    "HorizontalAlignment", "center");
+
+% Draw complete fixed road once before animation
+axes(axRoad); %#ok<LAXES>
+road_scene = drawScenarioRoad(axRoad, scenario_name, road_params, false);
+hold(axRoad, "on");
+
+%% Animation loop
+traj_full_h = plot(axRoad, x, y, "Color", trajectory_color, "LineWidth", 1.1, ...
+    "DisplayName", "Trayectoria real total");
+traj_run_h = plot(axRoad, x(1), y(1), "b", "LineWidth", 2.2, ...
+    "DisplayName", "Trayectoria recorrida");
+car_h = fill(axRoad, NaN, NaN, car_color_neutral, "EdgeColor", "k", "LineWidth", 1.4);
+front_h = plot(axRoad, NaN, NaN, "w", "LineWidth", 2.5);
+
+legend(axRoad, [traj_full_h, traj_run_h], "Location", "northwest");
 
 for k = 1:frame_step:N
-
-    %% Determinar estado del reparto
-
     if delta_T_lr(k) > 100
-        reparto_estado = 'Más par en lado derecho';
+        reparto_estado = "Mas par en lado derecho";
         car_color = car_color_right;
         status_color = [0.88 0.95 1.00];
     elseif delta_T_lr(k) < -100
-        reparto_estado = 'Más par en lado izquierdo';
+        reparto_estado = "Mas par en lado izquierdo";
         car_color = car_color_left;
         status_color = [1.00 0.92 0.86];
     else
-        reparto_estado = 'Reparto casi equilibrado';
+        reparto_estado = "Reparto casi equilibrado";
         car_color = car_color_neutral;
         status_color = [0.92 0.97 0.92];
     end
 
-    %% Ventana móvil de la carretera
-
-    x_window_min = x(k) - 25;
-    x_window_max = x(k) + 35;
-
-    %% Dibujar escena principal
-
-    cla(axRoad);
-    hold(axRoad, 'on');
-
-    % Fondo de carretera
-    fill(axRoad, ...
-        [x_window_min x_window_max x_window_max x_window_min], ...
-        [-road_width/2 -road_width/2 road_width/2 road_width/2], ...
-        road_color, 'EdgeColor', 'none');
-
-    % Línea central y bordes de carretera
-    plot(axRoad, [x_window_min x_window_max], [0 0], 'k--', 'LineWidth', 1);
-    plot(axRoad, [x_window_min x_window_max], [road_width/2 road_width/2], 'k', 'LineWidth', 1.2);
-    plot(axRoad, [x_window_min x_window_max], [-road_width/2 -road_width/2], 'k', 'LineWidth', 1.2);
-
-    % Trayectoria total y trayectoria recorrida
-    plot(axRoad, x, y, 'Color', trajectory_color, 'LineWidth', 1.1);
-    plot(axRoad, x(1:k), y(1:k), 'b', 'LineWidth', 2.2);
-
-    % Dibujar coche como rectángulo orientado
     car_poly = get_car_polygon(x(k), y(k), psi(k), car_length, car_width);
-    fill(axRoad, car_poly(1, :), car_poly(2, :), car_color, ...
-        'EdgeColor', 'k', 'LineWidth', 1.4);
+    set(car_h, "XData", car_poly(1, :), "YData", car_poly(2, :), "FaceColor", car_color);
+    set(traj_run_h, "XData", x(1:k), "YData", y(1:k));
 
-    % Marca frontal de orientación
     front_x = x(k) + (car_length/2) * cos(psi(k));
     front_y = y(k) + (car_length/2) * sin(psi(k));
-    plot(axRoad, [x(k) front_x], [y(k) front_y], 'w', 'LineWidth', 2.5);
+    set(front_h, "XData", [x(k), front_x], "YData", [y(k), front_y]);
 
-    % Configuración del eje principal
-    axis(axRoad, 'equal');
-    xlim(axRoad, [x_window_min x_window_max]);
-    ylim(axRoad, [y_min y_max]);
-    xlabel(axRoad, 'x [m]');
-    ylabel(axRoad, 'y [m]');
-    title(axRoad, 'Demo 2D desde datos: vehículo con reparto de par', ...
-        'FontSize', 16, 'FontWeight', 'bold');
-    grid(axRoad, 'on');
-
-    %% Panel de información textual
+    title(axRoad, {char(main_title), char(subtitle_case)}, "FontSize", 14, "FontWeight", "bold");
 
     cla(axInfo);
     axis(axInfo, [0 1 0 1]);
-    axis(axInfo, 'off');
-    hold(axInfo, 'on');
+    axis(axInfo, "off");
+    hold(axInfo, "on");
 
-    % Fondo del panel
-    rectangle(axInfo, 'Position', [0.01 0.01 0.98 0.98], ...
-        'FaceColor', [0.97 0.97 0.97], ...
-        'EdgeColor', [0.25 0.25 0.25], ...
-        'LineWidth', 1.5);
+    rectangle(axInfo, "Position", [0.01 0.01 0.98 0.98], ...
+        "FaceColor", [0.97 0.97 0.97], ...
+        "EdgeColor", [0.25 0.25 0.25], ...
+        "LineWidth", 1.5);
 
-    % Título interior del panel
-    text(axInfo, 0.05, 0.93, 'VALORES INSTANTÁNEOS', ...
-        'FontSize', 14, ...
-        'FontWeight', 'bold', ...
-        'FontName', 'Arial', ...
-        'Interpreter', 'none', ...
-        'Color', [0.1 0.1 0.1]);
+    text(axInfo, 0.05, 0.93, "VALORES INSTANTANEOS", ...
+        "FontSize", 13, "FontWeight", "bold", "FontName", "Arial", "Interpreter", "none");
+    text(axInfo, 0.05, 0.88, "Escenario: " + scenario_name, ...
+        "FontSize", 9.5, "FontName", "Consolas", "Interpreter", "none");
+    text(axInfo, 0.05, 0.84, "Control: " + control_case_name, ...
+        "FontSize", 9.5, "FontName", "Consolas", "Interpreter", "none");
 
-    % Valores opcionales de estabilidad como texto
-    if isnan(beta(k))
-        beta_text = '-';
-    else
-        beta_text = sprintf('%.3f', beta(k));
-    end
+    beta_text = number_or_dash(beta(k), "%.3f");
+    r_text = number_or_dash(r(k), "%.3f");
+    ay_text = number_or_dash(ay(k), "%.2f");
 
-    if isnan(r(k))
-        r_text = '-';
-    else
-        r_text = sprintf('%.3f', r(k));
-    end
-
-    if isnan(ay(k))
-        ay_text = '-';
-    else
-        ay_text = sprintf('%.2f', ay(k));
-    end
-
-    % Etiquetas y valores del panel
-    % Se usa Interpreter = 'none' para evitar que "_" se interprete como subíndice.
     labels = { ...
-        'Tiempo [s]', ...
-        'Vx [m/s]', ...
-        'beta [rad]', ...
-        'r [rad/s]', ...
-        'ay [m/s^2]', ...
-        'T_driver_total [N*m]', ...
-        'Mz_cmd [N*m]', ...
-        'Mz_applied [N*m]', ...
-        'T_FL [N*m]', ...
-        'T_FR [N*m]', ...
-        'T_RL [N*m]', ...
-        'T_RR [N*m]', ...
-        'T_left_total [N*m]', ...
-        'T_right_total [N*m]', ...
-        'Delta_T_LR [N*m]'};
+        "Tiempo [s]", "Vx [m/s]", "beta [rad]", "r [rad/s]", "ay [m/s^2]", ...
+        "T_driver_total [N*m]", "Mz_cmd [N*m]", "Mz_applied [N*m]", ...
+        "T_FL [N*m]", "T_FR [N*m]", "T_RL [N*m]", "T_RR [N*m]", ...
+        "T_left_total [N*m]", "T_right_total [N*m]", "Delta_T_LR [N*m]"};
 
     values = { ...
-        sprintf('%.2f', t(k)), ...
-        sprintf('%.2f', Vx(k)), ...
-        beta_text, ...
-        r_text, ...
-        ay_text, ...
-        sprintf('%.0f', T_driver_total(k)), ...
-        sprintf('%.0f', Mz_cmd(k)), ...
-        sprintf('%.0f', Mz_applied(k)), ...
-        sprintf('%.0f', T_FL(k)), ...
-        sprintf('%.0f', T_FR(k)), ...
-        sprintf('%.0f', T_RL(k)), ...
-        sprintf('%.0f', T_RR(k)), ...
-        sprintf('%.0f', T_left_total(k)), ...
-        sprintf('%.0f', T_right_total(k)), ...
-        sprintf('%.0f', delta_T_lr(k))};
+        sprintf("%.2f", t(k)), sprintf("%.2f", Vx(k)), beta_text, r_text, ay_text, ...
+        sprintf("%.0f", T_driver_total(k)), sprintf("%.0f", Mz_cmd(k)), sprintf("%.0f", Mz_applied(k)), ...
+        sprintf("%.0f", T_FL(k)), sprintf("%.0f", T_FR(k)), sprintf("%.0f", T_RL(k)), sprintf("%.0f", T_RR(k)), ...
+        sprintf("%.0f", T_left_total(k)), sprintf("%.0f", T_right_total(k)), sprintf("%.0f", delta_T_lr(k))};
 
-    y0 = 0.86;
-    dy_text = 0.052;
-
-    for i = 1:length(labels)
-
+    y0 = 0.78;
+    dy_text = 0.048;
+    for i = 1:numel(labels)
         y_text = y0 - (i-1) * dy_text;
-
-        % Etiqueta de la variable
-        text(axInfo, 0.05, y_text, labels{i}, ...
-            'FontSize', 10.2, ...
-            'FontName', 'Consolas', ...
-            'FontWeight', 'bold', ...
-            'Interpreter', 'none', ...
-            'HorizontalAlignment', 'left', ...
-            'VerticalAlignment', 'middle', ...
-            'Color', [0.10 0.10 0.10]);
-
-        % Valor numérico
-        text(axInfo, 0.95, y_text, values{i}, ...
-            'FontSize', 10.2, ...
-            'FontName', 'Consolas', ...
-            'Interpreter', 'none', ...
-            'HorizontalAlignment', 'right', ...
-            'VerticalAlignment', 'middle', ...
-            'Color', [0.00 0.20 0.55]);
-
+        text(axInfo, 0.05, y_text, labels{i}, "FontSize", 9.6, "FontName", "Consolas", ...
+            "FontWeight", "bold", "Interpreter", "none", "HorizontalAlignment", "left");
+        text(axInfo, 0.95, y_text, values{i}, "FontSize", 9.6, "FontName", "Consolas", ...
+            "Interpreter", "none", "HorizontalAlignment", "right", "Color", [0.00 0.20 0.55]);
     end
 
-    %% Barras de reparto lateral
-
     cla(axSideTorque);
-
     side_values = [T_left_total(k), T_right_total(k)];
     bh = barh(axSideTorque, side_values, 0.55);
     bh.FaceColor = bar_color;
-
     xlim(axSideTorque, [-max_side_torque max_side_torque]);
     yticks(axSideTorque, [1 2]);
-    yticklabels(axSideTorque, {'Izq.', 'Der.'});
-    xlabel(axSideTorque, 'Par total [N*m]');
-    title(axSideTorque, 'Reparto lateral', 'FontSize', 13, 'FontWeight', 'bold');
-    grid(axSideTorque, 'on');
-    hold(axSideTorque, 'on');
-
-    % Línea vertical en cero
-    plot(axSideTorque, [0 0], [0.5 2.5], 'k', 'LineWidth', 1);
-
-    %% Barras de par por rueda
+    yticklabels(axSideTorque, {"Izq.", "Der."});
+    xlabel(axSideTorque, "Par total [N*m]");
+    title(axSideTorque, "Reparto lateral", "FontSize", 12, "FontWeight", "bold");
+    grid(axSideTorque, "on");
+    hold(axSideTorque, "on");
+    plot(axSideTorque, [0 0], [0.5 2.5], "k", "LineWidth", 1);
 
     cla(axWheelTorque);
-
     wheel_values = [T_FL(k), T_FR(k), T_RL(k), T_RR(k)];
     bw = bar(axWheelTorque, wheel_values, 0.6);
     bw.FaceColor = bar_color;
-
     ylim(axWheelTorque, [-max_wheel_torque max_wheel_torque]);
     xticks(axWheelTorque, 1:4);
-    xticklabels(axWheelTorque, {'FL', 'FR', 'RL', 'RR'});
-    ylabel(axWheelTorque, 'Par [N*m]');
-    title(axWheelTorque, 'Par por rueda', 'FontSize', 13, 'FontWeight', 'bold');
-    grid(axWheelTorque, 'on');
-    hold(axWheelTorque, 'on');
+    xticklabels(axWheelTorque, {"FL", "FR", "RL", "RR"});
+    ylabel(axWheelTorque, "Par [N*m]");
+    title(axWheelTorque, "Par por rueda", "FontSize", 12, "FontWeight", "bold");
+    grid(axWheelTorque, "on");
+    hold(axWheelTorque, "on");
+    plot(axWheelTorque, [0.5 4.5], [0 0], "k", "LineWidth", 1);
 
-    % Línea horizontal en cero
-    plot(axWheelTorque, [0.5 4.5], [0 0], 'k', 'LineWidth', 1);
-
-    %% Actualizar caja de estado
-
-    set(status_box, ...
-        'String', reparto_estado, ...
-        'BackgroundColor', status_color);
-
+    set(status_box, "String", char(reparto_estado), "BackgroundColor", status_color);
     drawnow;
-
 end
 
-disp('Demo 2D desde datos completada correctamente.');
-disp('Figura de trayectoria guardada en results/figures.');
+disp("Demo 2D desde datos completada correctamente.");
+disp("Figura de trayectoria guardada en results/figures.");
 
-%% Función local: polígono del coche
+%% Local helpers
+function out = number_or_dash(value, fmt)
+if isnan(value)
+    out = "-";
+else
+    out = sprintf(fmt, value);
+end
+end
+
+function label = scenario_to_spanish_label(name)
+switch string(name)
+    case "double_lane_change"
+        label = "Doble cambio de carril";
+    case "aggressive_corner"
+        label = "Curva sostenida agresiva";
+    case "low_mu_lane_change"
+        label = "Cambio de carril con baja adherencia";
+    otherwise
+        label = "Escenario no identificado";
+end
+end
+
+function label = control_to_spanish_label(control_case_name)
+switch string(control_case_name)
+    case "without_control"
+        label = "Sin control";
+    case "stability_control"
+        label = "Control de estabilidad";
+    case "torque_vectoring"
+        label = "Torque vectoring";
+    otherwise
+        label = "Modo no identificado";
+end
+end
+
+function control_case_name = control_case_to_name(control_case)
+switch control_case
+    case 0
+        control_case_name = "without_control";
+    case 1
+        control_case_name = "stability_control";
+    case 2
+        control_case_name = "torque_vectoring";
+    otherwise
+        control_case_name = "unknown_control";
+end
+end
 
 function car_poly = get_car_polygon(xc, yc, psi, Lcar, Wcar)
-% Calcula las esquinas de un rectángulo orientado que representa el coche.
-%
-% Entradas:
-%   xc, yc : posición del centro del coche [m]
-%   psi    : orientación del coche [rad]
-%   Lcar   : longitud del coche [m]
-%   Wcar   : anchura del coche [m]
-%
-% Salida:
-%   car_poly : matriz 2x5 con el contorno cerrado del coche
+local_corners = [ ...
+     Lcar/2,  Wcar/2;
+     Lcar/2, -Wcar/2;
+    -Lcar/2, -Wcar/2;
+    -Lcar/2,  Wcar/2;
+     Lcar/2,  Wcar/2]';
 
-    % Esquinas del coche en coordenadas locales
-    local_corners = [ ...
-         Lcar/2,  Wcar/2;
-         Lcar/2, -Wcar/2;
-        -Lcar/2, -Wcar/2;
-        -Lcar/2,  Wcar/2;
-         Lcar/2,  Wcar/2]';
+R = [cos(psi), -sin(psi);
+     sin(psi),  cos(psi)];
 
-    % Matriz de rotación
-    R = [cos(psi), -sin(psi);
-         sin(psi),  cos(psi)];
+global_corners = R * local_corners;
+global_corners(1, :) = global_corners(1, :) + xc;
+global_corners(2, :) = global_corners(2, :) + yc;
 
-    % Transformar a coordenadas globales
-    global_corners = R * local_corners;
+car_poly = global_corners;
+end
 
-    global_corners(1, :) = global_corners(1, :) + xc;
-    global_corners(2, :) = global_corners(2, :) + yc;
+function road_scene = drawScenarioRoad(ax, scenario_name, params, dry_run)
+if nargin < 4
+    dry_run = false;
+end
 
-    car_poly = global_corners;
+road_width = params.road_width;
+x_data = params.x_data;
+y_data = params.y_data;
 
+x_min_data = min(x_data) - 20;
+x_max_data = max(x_data) + 40;
+y_min_data = min(y_data) - 20;
+y_max_data = max(y_data) + 20;
+
+switch string(scenario_name)
+    case {"double_lane_change", "low_mu_lane_change"}
+        cx = linspace(x_min_data, x_max_data, 400);
+        cy = zeros(size(cx));
+
+        left_x = cx;
+        left_y = cy + road_width/2;
+        right_x = cx;
+        right_y = cy - road_width/2;
+
+        road_scene.center_x = cx;
+        road_scene.center_y = cy;
+        road_scene.left_x = left_x;
+        road_scene.left_y = left_y;
+        road_scene.right_x = right_x;
+        road_scene.right_y = right_y;
+        road_scene.xlim = [x_min_data, x_max_data];
+        road_scene.ylim = [min([right_y y_min_data])-2, max([left_y y_max_data])+2];
+
+        if dry_run
+            return;
+        end
+
+        hold(ax, "on");
+        fill(ax, [left_x fliplr(right_x)], [left_y fliplr(right_y)], [0.90 0.90 0.90], "EdgeColor", "none");
+        plot(ax, left_x, left_y, "k", "LineWidth", 1.3);
+        plot(ax, right_x, right_y, "k", "LineWidth", 1.3);
+        plot(ax, cx, cy, "k--", "LineWidth", 1.0);
+
+        % Optional fixed reference path (from scenario definition)
+        try
+            scenario = scenario_library(string(scenario_name));
+            x_ref = scenario.Vx0 * scenario.t_y_ref;
+            y_ref = scenario.y_ref;
+            plot(ax, x_ref, y_ref, "m--", "LineWidth", 1.4, "DisplayName", "Referencia y_ref");
+        catch
+            % Keep compatibility even if scenario_library is unavailable.
+        end
+
+        if string(scenario_name) == "low_mu_lane_change"
+            zone_x0 = x_min_data + 0.30 * (x_max_data - x_min_data);
+            zone_x1 = x_min_data + 0.75 * (x_max_data - x_min_data);
+            zone_y0 = -road_width/2;
+            zone_y1 = road_width/2;
+            patch(ax, [zone_x0 zone_x1 zone_x1 zone_x0], [zone_y0 zone_y0 zone_y1 zone_y1], ...
+                [1.00 0.88 0.88], "FaceAlpha", 0.40, "EdgeColor", [0.75 0.15 0.15], "LineStyle", "--");
+            text(ax, zone_x0 + 1.0, zone_y1 - 0.6, "low \mu zone", ...
+                "Color", [0.70 0.10 0.10], "FontWeight", "bold", "FontSize", 11);
+        end
+
+    case "aggressive_corner"
+        L1 = 35;
+        R = 45;
+        theta_max = deg2rad(70);
+        L2 = 50;
+
+        n1 = 120; n2 = 180; n3 = 120;
+        s1 = linspace(0, L1, n1);
+        x1 = x_min_data + s1;
+        y1 = zeros(size(x1));
+
+        theta = linspace(0, theta_max, n2);
+        xc = x1(end);
+        yc = -R;
+        x2 = xc + R * sin(theta);
+        y2 = yc + R * (1 - cos(theta));
+
+        x3 = x2(end) + linspace(0, L2, n3) * cos(theta_max);
+        y3 = y2(end) + linspace(0, L2, n3) * sin(theta_max);
+
+        cx = [x1, x2(2:end), x3(2:end)];
+        cy = [y1, y2(2:end), y3(2:end)];
+
+        [left_x, left_y, right_x, right_y] = offset_polyline(cx, cy, road_width/2);
+
+        road_scene.center_x = cx;
+        road_scene.center_y = cy;
+        road_scene.left_x = left_x;
+        road_scene.left_y = left_y;
+        road_scene.right_x = right_x;
+        road_scene.right_y = right_y;
+        road_scene.xlim = [min([left_x right_x x_min_data]), max([left_x right_x x_max_data])];
+        road_scene.ylim = [min([left_y right_y y_min_data]), max([left_y right_y y_max_data])];
+
+        if dry_run
+            return;
+        end
+
+        hold(ax, "on");
+        fill(ax, [left_x fliplr(right_x)], [left_y fliplr(right_y)], [0.90 0.90 0.90], "EdgeColor", "none");
+        plot(ax, left_x, left_y, "k", "LineWidth", 1.3);
+        plot(ax, right_x, right_y, "k", "LineWidth", 1.3);
+        plot(ax, cx, cy, "k--", "LineWidth", 1.0);
+
+    otherwise
+        error("Escenario no soportado para dibujo de carretera: %s", scenario_name);
+end
+
+if ~dry_run
+    xlim(ax, road_scene.xlim);
+    ylim(ax, road_scene.ylim);
+    axis(ax, "equal");
+    grid(ax, "on");
+    xlabel(ax, "x [m]");
+    ylabel(ax, "y [m]");
+end
+end
+
+function [left_x, left_y, right_x, right_y] = offset_polyline(cx, cy, offset)
+dx = gradient(cx);
+dy = gradient(cy);
+nrm = sqrt(dx.^2 + dy.^2);
+nrm(nrm < 1e-6) = 1.0;
+nx = -dy ./ nrm;
+ny = dx ./ nrm;
+
+left_x = cx + offset * nx;
+left_y = cy + offset * ny;
+right_x = cx - offset * nx;
+right_y = cy - offset * ny;
 end

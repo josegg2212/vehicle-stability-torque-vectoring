@@ -59,9 +59,10 @@ load_system(model_file);
 %% Configurar solver del modelo 3D
 
 % Los bloques Simulation 3D trabajan normalmente a 60 Hz.
-% Por eso el fixed-step debe ser 1/60 para evitar errores de sample time.
+% El modelo contiene estados continuos, por eso usamos un solver continuo
+% en paso fijo en lugar de FixedStepDiscrete.
 set_param(model_name, "SolverType", "Fixed-step");
-set_param(model_name, "Solver", "FixedStepDiscrete");
+set_param(model_name, "Solver", "ode4");
 set_param(model_name, "FixedStep", "1/60");
 
 % Usamos la duración de las señales preparadas.

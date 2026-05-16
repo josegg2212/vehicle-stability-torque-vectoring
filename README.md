@@ -30,6 +30,32 @@ El proyecto integra:
 5. `run('scripts/export_demo_2D_input_data_from_full_system.m')`
 6. `run('scripts/demo_2D_from_data.m')`
 
+## Preparar las 9 demos (2D + 3D) de una vez
+
+Para generar automaticamente los 9 casos oficiales (`3 escenarios x 3 modos`) y dejar listos los datos para visualizacion 2D y 3D:
+
+1. Abrir MATLAB en la raiz del repositorio.
+2. `run('scripts/prepare_all_demos_2D_3D.m')`
+
+Salida generada:
+
+- `results/runs/demos_2D/<scenario>/<scenario>_<case>_demo_2D_input_data.mat`
+- `results/runs/demos_3D/<scenario>/<scenario>_<case>_demo_3D_unreal_input_data.mat`
+- `results/runs/demo_cases_manifest.csv`
+
+## Visualizar las 9 demos en lote
+
+Para recorrer los 9 casos y generar visualizacion 2D por caso (mas launchers 3D por caso):
+
+1. `run('scripts/run_all_demos_visualization.m')`
+
+Salida generada:
+
+- Figuras 2D por caso en:
+  `results/figures/demos_2D/<scenario>/<scenario>_<case>_trajectory.png`
+- Launchers 3D por caso en:
+  `results/runs/demos_3D/launchers/`
+
 ## Escenarios oficiales
 
 - `double_lane_change`: doble cambio de carril.
