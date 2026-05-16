@@ -53,6 +53,7 @@ t = out.logs_x.Time(:)';
 x = vectorize_signal(out.logs_x.Data, N);
 y = vectorize_signal(out.logs_y.Data, N);
 psi = vectorize_signal(out.logs_psi.Data, N);
+y_ref = vectorize_signal(out.logs_y_ref.Data, N);
 
 Vx = vectorize_signal(out.logs_Vx.Data, N);
 beta = vectorize_signal(out.logs_beta.Data, N);
@@ -60,6 +61,8 @@ r = vectorize_signal(out.logs_r.Data, N);
 ay = vectorize_signal(out.logs_ay.Data, N);
 
 T_driver_total = vectorize_signal(out.logs_T_driver_total.Data, N);
+delta_ff = get_log_or_fallback(out, "logs_delta_ff", "logs_delta", N);
+delta_cmd = get_log_or_default(out, "logs_delta_cmd", N, delta_ff);
 
 Mz_cmd = vectorize_signal(out.logs_Mz_cmd.Data, N);
 Mz_applied = vectorize_signal(out.logs_Mz_applied.Data, N);
@@ -70,9 +73,9 @@ T_FR = vectorize_signal(out.logs_T_FR.Data, N);
 T_RL = vectorize_signal(out.logs_T_RL.Data, N);
 T_RR = vectorize_signal(out.logs_T_RR.Data, N);
 
-T_left_total = vectorize_signal(out.logs_T_left_total.Data, N);
-T_right_total = vectorize_signal(out.logs_T_right_total.Data, N);
-delta_T_lr = vectorize_signal(out.logs_delta_T_lr.Data, N);
+T_left_total = T_FL + T_RL;
+T_right_total = T_FR + T_RR;
+delta_T_lr = T_right_total - T_left_total;
 
 %% Save demo input file
 runs_folder = config.runs_folder;
@@ -85,7 +88,9 @@ output_file = fullfile(runs_folder, "demo_2D_input_data.mat");
 
 save(output_file, ...
     "t", "x", "y", "psi", ...
+    "y_ref", ...
     "Vx", "beta", "r", "ay", ...
+    "delta_ff", "delta_cmd", ...
     "T_driver_total", ...
     "Mz_cmd", "Mz_applied", "Mz_to_plant", ...
     "T_FL", "T_FR", "T_RL", "T_RR", ...
@@ -114,5 +119,22 @@ elseif length(signal) < N
 elseif length(signal) > N
     signal = signal(1:N);
 end
+end
 
+
+function signal = get_log_or_fallback(out, primary_name, fallback_name, N)
+try
+    signal = vectorize_signal(out.get(primary_name).Data, N);
+catch
+    signal = vectorize_signal(out.get(fallback_name).Data, N);
+end
+end
+
+
+function signal = get_log_or_default(out, signal_name, N, default_signal)
+try
+    signal = vectorize_signal(out.get(signal_name).Data, N);
+catch
+    signal = default_signal;
+end
 end

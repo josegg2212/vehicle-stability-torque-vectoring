@@ -14,6 +14,7 @@ config.project_root = project_root;
 config.results_root = fullfile(project_root, "results");
 config.runs_folder = fullfile(config.results_root, "runs");
 config.figures_folder = fullfile(config.results_root, "figures");
+config.demo2d_video_folder = fullfile(config.results_root, "demo_2D", "videos");
 
 config.input_checks_folder = fullfile(config.results_root, "input_checks");
 

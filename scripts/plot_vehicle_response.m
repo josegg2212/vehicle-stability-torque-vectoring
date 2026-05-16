@@ -27,23 +27,20 @@ y_ref = get_logged_signal(out, "logs_y_ref", N);
 
 Vx = get_logged_signal(out, "logs_Vx", N);
 Vy = get_logged_signal(out, "logs_Vy", N);
-psi = get_logged_signal(out, "logs_psi", N); %#ok<NASGU>
 
 beta = get_logged_signal(out, "logs_beta", N);
 r = get_logged_signal(out, "logs_r", N);
 ay = get_logged_signal(out, "logs_ay", N);
 
-delta = get_logged_signal(out, "logs_delta", N); %#ok<NASGU>
-mu = get_logged_signal(out, "logs_mu", N); %#ok<NASGU>
+delta_ff = get_logged_signal(out, "logs_delta_ff", N, get_logged_signal(out, "logs_delta", N, zeros(N,1)));
+delta_cmd = get_logged_signal(out, "logs_delta_cmd", N, delta_ff);
+mu = get_logged_signal(out, "logs_mu", N);
 T_driver_total = get_logged_signal(out, "logs_T_driver_total", N);
 
 T_FL = get_logged_signal(out, "logs_T_FL", N);
 T_FR = get_logged_signal(out, "logs_T_FR", N);
 T_RL = get_logged_signal(out, "logs_T_RL", N);
 T_RR = get_logged_signal(out, "logs_T_RR", N);
-T_left_total = get_logged_signal(out, "logs_T_left_total", N);
-T_right_total = get_logged_signal(out, "logs_T_right_total", N);
-delta_T_lr = get_logged_signal(out, "logs_delta_T_lr", N);
 
 Mz_cmd = get_logged_signal(out, "logs_Mz_cmd", N);
 Mz_applied = get_logged_signal(out, "logs_Mz_applied", N);
@@ -134,15 +131,14 @@ title("Driver total torque and road friction")
 legend("T_driver,total", "mu", "Location", "best")
 
 subplot(5,2,10)
-plot(t, T_left_total, "LineWidth", 1.5)
+plot(t, rad2deg(delta_ff), "LineWidth", 1.5)
 hold on
-plot(t, T_right_total, "LineWidth", 1.5)
-plot(t, delta_T_lr, "--", "LineWidth", 1.5)
+plot(t, rad2deg(delta_cmd), "--", "LineWidth", 1.5)
 grid on
 xlabel("Time [s]")
-ylabel("Torque [N*m]")
-title("Left/right total torque and delta")
-legend("T_left_total", "T_right_total", "delta_T_lr", "Location", "best")
+ylabel("Steering [deg]")
+title("Steering feedforward vs commanded")
+legend("delta_ff", "delta_cmd", "Location", "best")
 
 sgtitle("Vehicle response - " + selected_scenario + " - " + control_case_name, ...
     "Interpreter", "none")
@@ -171,27 +167,18 @@ disp(" - " + string(file_name_fig));
 end
 
 
-function signal = get_logged_signal(out, signal_name, N)
+function signal = get_logged_signal(out, signal_name, N, fallback)
 %GET_LOGGED_SIGNAL Returns a column vector with length N.
+
+if nargin < 4
+    fallback = zeros(N, 1);
+end
 
 try
     sig = out.get(char(signal_name));
     signal = normalize_logged_signal(sig.Data, N);
 catch
-    signal = zeros(N, 1);
-end
-
-end
-
-
-function tf = has_log(out, signal_name)
-%HAS_LOG True when a logged signal is available in SimulationOutput.
-
-try
-    out.get(char(signal_name));
-    tf = true;
-catch
-    tf = false;
+    signal = normalize_logged_signal(fallback, N);
 end
 
 end

@@ -2,7 +2,8 @@ function report = check_required_logs(out)
 %CHECK_REQUIRED_LOGS Checks that all required logged signals exist.
 
 required_signals = [
-    "logs_delta"
+    "logs_delta_ff"
+    "logs_delta_cmd"
     "logs_mu"
     "logs_T_driver_total"
     "logs_y_ref"

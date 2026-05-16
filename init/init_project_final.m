@@ -24,6 +24,10 @@ if ~exist(fullfile(project_root, 'results', 'figures'), 'dir')
     mkdir(fullfile(project_root, 'results', 'figures'));
 end
 
+if ~exist(fullfile(project_root, 'results', 'demo_2D', 'videos'), 'dir')
+    mkdir(fullfile(project_root, 'results', 'demo_2D', 'videos'));
+end
+
 if ~exist(fullfile(project_root, 'results', 'input_checks'), 'dir')
     mkdir(fullfile(project_root, 'results', 'input_checks'));
 end
@@ -48,6 +52,7 @@ end
 run(fullfile(init_folder, 'init_vehicle_params.m'));
 run(fullfile(init_folder, 'init_controller_params.m'));
 run(fullfile(init_folder, 'init_torque_allocator_params.m'));
+run(fullfile(init_folder, 'init_path_tracking_controller.m'));
 run(fullfile(init_folder, 'init_demo_params.m'));
 
 % Main Simulink model
@@ -59,11 +64,11 @@ end
 
 % Default scenario data so model update works immediately after init.
 if ~evalin('base', 'exist(''Tend'', ''var'')')
-    selected_scenario = "double_lane_change"; %#ok<NASGU>
+    selected_scenario = "double_lane_change";
     run(fullfile(scripts_folder, 'init_full_system_scenario.m'));
 end
 
 if ~evalin('base', 'exist(''control_case'', ''var'')')
-    control_case = 0; %#ok<NASGU>
+    control_case = 0;
     assignin('base', 'control_case', control_case);
 end

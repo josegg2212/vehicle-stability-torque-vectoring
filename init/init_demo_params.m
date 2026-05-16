@@ -8,3 +8,5 @@ road_width = 7.0;       % Road width [m]
 lane_width = 3.5;       % Lane width [m]
 
 demo_dt = 0.02;         % Animation time step [s]
+export_video = false;   % Save animation using VideoWriter when true
+video_fps = 30;

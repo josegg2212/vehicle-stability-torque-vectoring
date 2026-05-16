@@ -52,32 +52,32 @@ default_2d_input = fullfile(config.runs_folder, "demo_2D_input_data.mat");
 default_2d_trajectory = fullfile(config.figures_folder, "demo_2D_from_data_trajectory.png");
 
 for i = 1:height(manifest)
-    scenario = get_manifest_col(manifest, "scenario", 1);
-    control_case_name = get_manifest_col(manifest, "control_case_name", 3);
-    file_2d = get_manifest_col(manifest, "demo_2d_file", 5);
-    file_3d = get_manifest_col(manifest, "demo_3d_file", 6);
+    manifest_scenario_col = get_manifest_col(manifest, "scenario", 1);
+    manifest_control_col = get_manifest_col(manifest, "control_case_name", 3);
+    manifest_file_2d_col = get_manifest_col(manifest, "demo_2d_file", 5);
+    manifest_file_3d_col = get_manifest_col(manifest, "demo_3d_file", 6);
 
-    scenario = scenario(i);
-    control_case_name = control_case_name(i);
-    file_2d = file_2d(i);
-    file_3d = file_3d(i);
+    case_scenario_name = manifest_scenario_col(i);
+    case_control_name = manifest_control_col(i);
+    case_file_2d = manifest_file_2d_col(i);
+    case_file_3d = manifest_file_3d_col(i);
 
-    case_id = scenario + "_" + control_case_name;
+    case_id = case_scenario_name + "_" + case_control_name;
 
     disp("========================================");
     disp("Visualizing case: " + case_id);
     disp("========================================");
 
-    if ~exist(file_2d, "file")
-        warning("2D file missing, skipping: %s", file_2d);
+    if ~exist(case_file_2d, "file")
+        warning("2D file missing, skipping: %s", case_file_2d);
     else
-        s = load(file_2d);
+        s = load(case_file_2d);
         save(default_2d_input, "-struct", "s");
 
         run(fullfile(project_root, "scripts", "demo_2D_from_data.m"));
         close all;
 
-        scenario_figure_folder = fullfile(figures_2d_root, char(scenario));
+        scenario_figure_folder = fullfile(figures_2d_root, char(case_scenario_name));
         if ~exist(scenario_figure_folder, "dir")
             mkdir(scenario_figure_folder);
         end
@@ -94,10 +94,10 @@ for i = 1:height(manifest)
         end
     end
 
-    if ~exist(file_3d, "file")
-        warning("3D file missing, launcher not generated: %s", file_3d);
+    if ~exist(case_file_3d, "file")
+        warning("3D file missing, launcher not generated: %s", case_file_3d);
     else
-        generate_3d_launcher(launchers_3d_root, scenario, control_case_name, file_3d, project_root);
+        generate_3d_launcher(launchers_3d_root, case_scenario_name, case_control_name, case_file_3d, project_root);
     end
 end
 

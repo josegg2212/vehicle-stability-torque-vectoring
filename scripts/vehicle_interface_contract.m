@@ -21,7 +21,7 @@ input_unit = [
 ];
 
 input_description = [
-    "Steering angle input for the manoeuvre"
+    "Steering feedforward input from scenario (delta_ff)"
     "Road friction coefficient"
     "Total driver torque demand"
     "Lateral reference trajectory"

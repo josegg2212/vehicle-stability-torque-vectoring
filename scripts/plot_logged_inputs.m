@@ -14,7 +14,14 @@ end
 fig = figure("Name", "Scenario input signals", "Visible", "on");
 
 subplot(4,1,1)
-plot(out.logs_delta.Time, rad2deg(out.logs_delta.Data), "LineWidth", 1.5)
+[t_delta, delta_ff] = get_logged_data(out, "logs_delta_ff", "logs_delta");
+plot(t_delta, rad2deg(delta_ff), "LineWidth", 1.5)
+hold on
+try
+    plot(out.logs_delta_cmd.Time, rad2deg(out.logs_delta_cmd.Data), "--", "LineWidth", 1.2)
+    legend("\delta_{ff}", "\delta_{cmd}", "Interpreter", "none", "Location", "best");
+catch
+end
 grid on
 ylabel("\delta [deg]")
 title("Scenario input signals - " + selected_scenario, "Interpreter", "none")
@@ -56,3 +63,14 @@ savefig(fig, file_name_fig);
 disp("Input signal plots saved:");
 disp(" - " + string(file_name_png));
 disp(" - " + string(file_name_fig));
+
+
+function [t, data] = get_logged_data(out, preferred_signal, fallback_signal)
+try
+    sig = out.get(preferred_signal);
+catch
+    sig = out.get(fallback_signal);
+end
+t = sig.Time;
+data = sig.Data;
+end
