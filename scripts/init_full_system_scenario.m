@@ -60,6 +60,9 @@ Vx0 = scenario.Vx0;
 if scenario_name == "aggressive_corner"
     K_y_active = K_y_corner;
     K_psi_active = K_psi_corner;
+elseif scenario_name == "high_speed_low_mu_slalom"
+    K_y_active = K_y_slalom;
+    K_psi_active = K_psi_slalom;
 else
     K_y_active = K_y_lane;
     K_psi_active = K_psi_lane;

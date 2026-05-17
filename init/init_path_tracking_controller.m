@@ -15,6 +15,10 @@ K_psi_lane = 0.45;    % [rad/rad]
 K_y_corner = 0.040;   % [rad/m]
 K_psi_corner = 0.16;  % [rad/rad]
 
+% Gains for high-speed low-mu slalom scenario.
+K_y_slalom = 0.070;   % [rad/m]
+K_psi_slalom = 0.60;  % [rad/rad]
+
 % Active gains are selected in init_full_system_scenario.m
 K_y_active = K_y_lane;
 K_psi_active = K_psi_lane;

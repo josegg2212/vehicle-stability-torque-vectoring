@@ -1,0 +1,13 @@
+scenario,control_case,control_case_name,duration_s,max_abs_delta_ff_deg,max_abs_delta_cmd_deg,min_mu,mean_T_driver_total_Nm,max_y_ref_m,min_y_ref_m,max_abs_y_ref_m
+double_lane_change,0,without_control,12,4.59800617198408,6.07953629652792,0.9,1200,3.5,0,3.5
+double_lane_change,1,stability_control,12,4.59865492731614,6.74212263606332,0.9,1200,3.5,0,3.5
+double_lane_change,2,torque_vectoring,12,4.59875268515312,7.74604997501602,0.9,1200,3.5,0,3.5
+aggressive_corner,0,without_control,14,3.2,1.83677893541515,0.9,1200,61.3650111402039,0,61.3650111402039
+aggressive_corner,1,stability_control,14,3.2,2.06974438951101,0.9,1200,61.3650111402039,0,61.3650111402039
+aggressive_corner,2,torque_vectoring,14,3.2,2.79151848471078,0.9,1200,61.3650111402039,0,61.3650111402039
+low_mu_lane_change,0,without_control,12,3.78078057816689,14.372449615437,0.45,1200,3.5,0,3.5
+low_mu_lane_change,1,stability_control,12,3.79890678189145,7.16140164231389,0.45,1200,3.5,0,3.5
+low_mu_lane_change,2,torque_vectoring,12,3.79205823935275,6.79249262992079,0.45,1200,3.5,0,3.5
+high_speed_low_mu_slalom,0,without_control,13,3.67552019345019,25,0.5,2400,2.1,-2.1,2.1
+high_speed_low_mu_slalom,1,stability_control,13,3.75689652119896,25,0.5,2400,2.1,-2.1,2.1
+high_speed_low_mu_slalom,2,torque_vectoring,13,3.77920088214231,22.4423995976811,0.5,2400,2.1,-2.1,2.1

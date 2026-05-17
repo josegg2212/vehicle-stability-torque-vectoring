@@ -1,0 +1,2 @@
+scenario,control_case,control_case_name,duration_s,max_abs_delta_ff_deg,max_abs_delta_cmd_deg,min_mu,mean_T_driver_total_Nm,max_y_ref_m,min_y_ref_m,max_abs_y_ref_m
+low_mu_lane_change,0,without_control,12,3.78078057816689,14.372449615437,0.45,1200,3.5,0,3.5

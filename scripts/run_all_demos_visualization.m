@@ -1,15 +1,6 @@
 %% run_all_demos_visualization.m
-% Batch visualization runner for the 9 official demo cases.
-%
-% What it does:
-%   1) Reads results/runs/demo_cases_manifest.csv
-%   2) Runs the 2D visualization for each case
-%   3) Stores a case-specific trajectory image
-%   4) Generates a per-case 3D launcher script
-%
-% Notes:
-% - 2D animation windows are still shown by demo_2D_from_data.m.
-% - 3D launchers load one case into base workspace and open demo_3D_unreal.slx.
+% Runs 2D visualization for all demo cases and stores per-case figures.
+% It also generates one 3D launcher script per case.
 
 bdclose all;
 clearvars;
@@ -118,7 +109,7 @@ if fid < 0
     error("Cannot create 3D launcher: %s", launcher_path);
 end
 
-cleaner = onCleanup(@() fclose(fid)); %#ok<NASGU>
+cleaner = onCleanup(@() fclose(fid));
 
 fprintf(fid, "%% Auto-generated launcher for case: %s\n", case_id);
 fprintf(fid, "clearvars; clc; close all;\n");

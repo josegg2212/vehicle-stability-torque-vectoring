@@ -5,13 +5,24 @@
 clc;
 close all;
 
+%% Locate project root and initialize
+this_script = mfilename("fullpath");
+project_root = fileparts(this_script);
+scripts_folder = fullfile(project_root, "scripts");
+
+cd(project_root);
+addpath(scripts_folder);
+
+run(fullfile(project_root, "init", "init_project_final.m"));
+
 %% Select scenario
 % Available options:
 % "double_lane_change"
 % "aggressive_corner"
 % "low_mu_lane_change"
+% "high_speed_low_mu_slalom"
 
-%% AQUI CAMBIO ESCENARIO PARA GRAFICAS
+%% Choose one scenario for quick input plots
 selected_scenario = "double_lane_change";
 
 %% Project configuration
@@ -19,7 +30,7 @@ config = project_config();
 model_name = config.model_name;
 
 %% Load selected scenario
-run(fullfile(fileparts(mfilename("fullpath")), "scripts", "init_full_system_scenario.m"));
+run(fullfile(scripts_folder, "init_full_system_scenario.m"));
 
 %% Run Simulink model
 out = sim(model_name, "StopTime", "Tend");

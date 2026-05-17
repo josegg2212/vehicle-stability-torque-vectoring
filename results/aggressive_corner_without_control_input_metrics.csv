@@ -1,0 +1,2 @@
+scenario,control_case,control_case_name,duration_s,max_abs_delta_ff_deg,max_abs_delta_cmd_deg,min_mu,mean_T_driver_total_Nm,max_y_ref_m,min_y_ref_m,max_abs_y_ref_m
+aggressive_corner,0,without_control,14,3.2,1.83677893541515,0.9,1200,61.3650111402039,0,61.3650111402039

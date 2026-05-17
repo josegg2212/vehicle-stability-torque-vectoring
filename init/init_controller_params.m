@@ -1,69 +1,46 @@
-% =========================================================================
-% init_persona3_controller.m
-% Persona 3 - Parámetros del controlador de estabilidad
-% =========================================================================
+% init_controller_params.m
+% Stability controller parameters
 
-
-
-% -------------------------------------------------------------------------
-% Reparto de masas por eje
-% -------------------------------------------------------------------------
+% Axle mass split
 mf = m * b / L;
 mr = m * a / L;
 
-% -------------------------------------------------------------------------
-% Gradiente de subviraje
-% -------------------------------------------------------------------------
+% Understeer gradient
 Kv = mf / (2 * Caf) - mr / (2 * Car);
 
-% -------------------------------------------------------------------------
-% Referencia de yaw-rate calculada a partir de delta
+% Yaw-rate reference gain from steering input
 % r_ref = G_rref * delta
-% -------------------------------------------------------------------------
 G_rref = Vx / (L + Kv * Vx^2);
 
-% -------------------------------------------------------------------------
-% Parámetros del PI de yaw-rate
-% -------------------------------------------------------------------------
+% PI gains for yaw-rate loop
 Kp_r = 9000;
 Ki_r = 15000;
 
-% -------------------------------------------------------------------------
-% Parámetros del PI de beta
-% -------------------------------------------------------------------------
+% PI gains for sideslip loop
 Kp_beta = 2.4e5;
 Ki_beta = 3.6e5;
 
-% -------------------------------------------------------------------------
-% Referencia de beta
-% -------------------------------------------------------------------------
+% Sideslip reference
 beta_ref = 0;   % rad
 
-% -------------------------------------------------------------------------
-% Umbrales del modo override
-% -------------------------------------------------------------------------
+% Override thresholds
 beta_on_deg  = 0.8;
 beta_off_deg = 0.2;
-
 beta_on_rad  = deg2rad(beta_on_deg);
 beta_off_rad = deg2rad(beta_off_deg);
 
-% -------------------------------------------------------------------------
-% Saturación del momento corrector
-% -------------------------------------------------------------------------
+% Corrective yaw moment saturation
 Mz_max = 2.0e4;     % N*m
 Mz_min = -2.0e4;    % N*m
 
-% -------------------------------------------------------------------------
-% Modos de trabajo del testbench
-% 0 -> sin control
-% 1 -> controlador yaw con referencia fija
-% 2 -> controlador yaw con referencia calculada
+% Testbench mode selector
+% 0 -> without control
+% 1 -> yaw controller with fixed reference
+% 2 -> yaw controller with computed reference
 % 3 -> override
-% -------------------------------------------------------------------------
 control_mode = 0;
 
-% Referencia fija opcional para pruebas rápidas
+% Optional fixed yaw-rate reference for quick checks
 r_ref_fixed = 0.7;  % rad/s
 
-disp('init_controller.m cargado correctamente.');
+disp("init_controller_params.m loaded.");

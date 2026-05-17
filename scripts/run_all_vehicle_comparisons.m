@@ -1,5 +1,5 @@
 %% Run all vehicle comparison plots
-% This script generates comparison plots for all official scenarios.
+% This script generates comparison plots for all configured scenarios.
 
 clc;
 close all;
@@ -19,6 +19,7 @@ scenario_list = [
     "double_lane_change"
     "aggressive_corner"
     "low_mu_lane_change"
+    "high_speed_low_mu_slalom"
 ];
 
 %% Run comparisons

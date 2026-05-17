@@ -1,5 +1,5 @@
 %% Run all full-system scenarios
-% Executes all official scenarios under all control modes for full_system.
+% Executes every scenario defined for full_system under all control modes.
 
 clc;
 close all;
@@ -22,6 +22,7 @@ scenario_list = [
     "double_lane_change"
     "aggressive_corner"
     "low_mu_lane_change"
+    "high_speed_low_mu_slalom"
 ];
 
 %% Control cases

@@ -73,7 +73,27 @@ delta_T_lr = T_right_total - T_left_total;
 
 %% Fixed road + fixed reference from scenario definition
 scenario = scenario_library(scenario_name);
-road_scene = build_road_scene(scenario, road_width);
+if ~exist("use_presentation_axes", "var")
+    use_presentation_axes = false;
+end
+if ~exist("presentation_xlim_straight", "var")
+    presentation_xlim_straight = [-10, 320];
+end
+if ~exist("presentation_ylim_straight", "var")
+    presentation_ylim_straight = [-14, 14];
+end
+if ~exist("presentation_xlim_corner", "var")
+    presentation_xlim_corner = [-10, 350];
+end
+if ~exist("presentation_ylim_corner", "var")
+    presentation_ylim_corner = [-15, 80];
+end
+
+axis_cfg = build_axis_config( ...
+    use_presentation_axes, ...
+    presentation_xlim_straight, presentation_ylim_straight, ...
+    presentation_xlim_corner, presentation_ylim_corner);
+road_scene = build_road_scene(scenario, road_width, axis_cfg);
 [x_ref_plot, y_ref_plot] = build_reference_path(scenario, t, y_ref);
 
 %% Static trajectory figure
@@ -84,7 +104,7 @@ end
 
 fig_static = figure("Color", "w");
 ax_static = axes("Parent", fig_static);
-draw_road_scene(ax_static, road_scene, scenario_name);
+draw_road_scene(ax_static, road_scene);
 hold(ax_static, "on");
 ref_static_h = plot(ax_static, x_ref_plot, y_ref_plot, "m--", "LineWidth", 1.4, "DisplayName", "Reference");
 veh_static_h = plot(ax_static, x, y, "b", "LineWidth", 1.6, "DisplayName", "Vehicle path");
@@ -114,7 +134,7 @@ axInfo = axes("Parent", fig, "Position", [0.72 0.55 0.25 0.35]); axis(axInfo, "o
 axSide = axes("Parent", fig, "Position", [0.74 0.34 0.22 0.14]);
 axWheel = axes("Parent", fig, "Position", [0.74 0.12 0.22 0.16]);
 
-draw_road_scene(axRoad, road_scene, scenario_name);
+draw_road_scene(axRoad, road_scene);
 hold(axRoad, "on");
 ref_h = plot(axRoad, x_ref_plot, y_ref_plot, "m--", "LineWidth", 1.4, "DisplayName", "Reference");
 traj_h = plot(axRoad, x, y, "Color", [0.68 0.68 0.68], "LineWidth", 1.0, "DisplayName", "Vehicle path (full)");
@@ -156,9 +176,19 @@ k_end = get_animation_end_index(x, road_scene);
 for k = 1:frame_step:k_end
     [car_color, status_text, status_color] = classify_torque_state(delta_T_lr(k));
 
+    if ~isgraphics(car_h) || ~isgraphics(run_h) || ~isgraphics(front_h) || ~isgraphics(axRoad)
+        warning("Demo 2D animation stopped early because figure handles are no longer valid.");
+        break;
+    end
+
     car_poly = get_car_polygon(x(k), y(k), psi(k), car_length, car_width);
-    set(car_h, "XData", car_poly(1, :), "YData", car_poly(2, :), "FaceColor", car_color);
-    set(run_h, "XData", x(1:k), "YData", y(1:k));
+    try
+        set(car_h, "XData", car_poly(1, :), "YData", car_poly(2, :), "FaceColor", car_color);
+        set(run_h, "XData", x(1:k), "YData", y(1:k));
+    catch
+        warning("Demo 2D animation stopped early while updating vehicle graphics.");
+        break;
+    end
 
     front_x = x(k) + (car_length/2) * cos(psi(k));
     front_y = y(k) + (car_length/2) * sin(psi(k));
@@ -280,7 +310,16 @@ end
 end
 
 
-function road_scene = build_road_scene(scenario, road_width)
+function axis_cfg = build_axis_config(use_presentation_axes, xlim_straight, ylim_straight, xlim_corner, ylim_corner)
+axis_cfg.use_presentation_axes = logical(use_presentation_axes);
+axis_cfg.presentation_xlim_straight = xlim_straight;
+axis_cfg.presentation_ylim_straight = ylim_straight;
+axis_cfg.presentation_xlim_corner = xlim_corner;
+axis_cfg.presentation_ylim_corner = ylim_corner;
+end
+
+
+function road_scene = build_road_scene(scenario, road_width, axis_cfg)
 cx = scenario.road_x(:)';
 cy = scenario.road_y(:)';
 [left_x, left_y, right_x, right_y] = offset_polyline(cx, cy, road_width/2);
@@ -293,23 +332,27 @@ road_scene.right_x = right_x;
 road_scene.right_y = right_y;
 
 if string(scenario.name) == "aggressive_corner"
-    road_scene.xlim = [min([left_x right_x]) - 10, max([left_x right_x]) + 20];
-    road_scene.ylim = [min([left_y right_y]) - 10, max([left_y right_y]) + 10];
-    road_scene.animation_x_end = road_scene.xlim(2);
+    if axis_cfg.use_presentation_axes
+        road_scene.xlim = axis_cfg.presentation_xlim_corner;
+        road_scene.ylim = axis_cfg.presentation_ylim_corner;
+    else
+        road_scene.xlim = [min([left_x right_x]) - 10, max([left_x right_x]) + 20];
+        road_scene.ylim = [min([left_y right_y]) - 10, max([left_y right_y]) + 10];
+    end
+    road_scene.animation_x_end = min(max(cx), road_scene.xlim(2));
 else
     x_start = min(cx);
     x_end = max(cx);
-    if isfield(scenario, "x_ref") && isfield(scenario, "y_ref_path")
-        idx_last_ref = find(abs(scenario.y_ref_path(:)) > 0.05, 1, "last");
-        if ~isempty(idx_last_ref)
-            x_end = min(x_end, scenario.x_ref(idx_last_ref) + 90);
-        end
-    end
     if isfield(scenario, "low_mu_zone_x")
         x_end = max(x_end, scenario.low_mu_zone_x(2) + 40);
     end
-    road_scene.xlim = [x_start - 5, x_end];
-    road_scene.ylim = [-6.5, 6.5];
+    if axis_cfg.use_presentation_axes
+        road_scene.xlim = axis_cfg.presentation_xlim_straight;
+        road_scene.ylim = axis_cfg.presentation_ylim_straight;
+    else
+        road_scene.xlim = [x_start - 10, x_end + 10];
+        road_scene.ylim = [-14, 14];
+    end
     road_scene.animation_x_end = x_end;
 end
 
@@ -320,7 +363,7 @@ end
 end
 
 
-function draw_road_scene(ax, road_scene, scenario_name)
+function draw_road_scene(ax, road_scene)
 cla(ax);
 hold(ax, "on");
 fill(ax, [road_scene.left_x fliplr(road_scene.right_x)], ...
@@ -330,7 +373,7 @@ plot(ax, road_scene.left_x, road_scene.left_y, "k", "LineWidth", 1.2);
 plot(ax, road_scene.right_x, road_scene.right_y, "k", "LineWidth", 1.2);
 plot(ax, road_scene.center_x, road_scene.center_y, "k--", "LineWidth", 1.0);
 
-if string(scenario_name) == "low_mu_lane_change" && isfield(road_scene, "low_mu_zone_x")
+if isfield(road_scene, "low_mu_zone_x")
     zx = road_scene.low_mu_zone_x;
     yb = [min(road_scene.right_y), max(road_scene.left_y)];
     patch(ax, [zx(1) zx(2) zx(2) zx(1)], [yb(1) yb(1) yb(2) yb(2)], ...
@@ -344,11 +387,7 @@ end
 
 xlim(ax, road_scene.xlim);
 ylim(ax, road_scene.ylim);
-if string(scenario_name) == "aggressive_corner"
-    axis(ax, "equal");
-else
-    axis(ax, "normal");
-end
+axis(ax, "normal");
 grid(ax, "on");
 xlabel(ax, "x [m]");
 ylabel(ax, "y [m]");
@@ -419,6 +458,8 @@ switch string(name)
         label = "Aggressive corner";
     case "low_mu_lane_change"
         label = "Low mu lane change";
+    case "high_speed_low_mu_slalom"
+        label = "High-speed low-mu slalom";
     otherwise
         label = "Unknown scenario";
 end

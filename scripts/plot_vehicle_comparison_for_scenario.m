@@ -6,6 +6,9 @@ function plot_vehicle_comparison_for_scenario(selected_scenario)
 config = project_config();
 model_name = config.model_name;
 
+% Ensure all init parameters are available in this function workspace.
+run(fullfile(config.project_root, "init", "init_project_final.m"));
+
 %% Control cases
 control_case_list = [0 1 2];
 control_case_names = [
@@ -38,9 +41,9 @@ for j = 1:numel(control_case_list)
     out = sim(model_name, "StopTime", "Tend");
 
     %% Store output
-    results(j).control_case = control_case; %#ok<AGROW>
-    results(j).control_case_name = control_case_name; %#ok<AGROW>
-    results(j).out = out; %#ok<AGROW>
+    results(j).control_case = control_case;
+    results(j).control_case_name = control_case_name;
+    results(j).out = out;
     yaw_sources(j) = preferred_yaw_signal_name(out);
 
 end

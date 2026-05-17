@@ -1,5 +1,5 @@
 % init_torque_allocator_params.m
-% Parámetros del reparto de par
+% Torque allocator parameters
 
 % Distribution of the corrective yaw moment between axles
 theta_front = 0.40;     % Balanced front/rear yaw support with robust low-mu behavior

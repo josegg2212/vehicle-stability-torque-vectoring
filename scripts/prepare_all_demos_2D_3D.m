@@ -1,6 +1,6 @@
 %% prepare_all_demos_2D_3D.m
-% Generates all official demo inputs (2D and 3D) for:
-%   3 scenarios x 3 control modes = 9 demo cases.
+% Generates all demo inputs (2D and 3D) for:
+%   4 scenarios x 3 control modes = 12 demo cases.
 %
 % Outputs:
 %   results/runs/demos_2D/<scenario>/<scenario>_<case>_demo_2D_input_data.mat
@@ -32,6 +32,7 @@ scenario_list = [
     "double_lane_change"
     "aggressive_corner"
     "low_mu_lane_change"
+    "high_speed_low_mu_slalom"
 ];
 
 control_case_list = [0 1 2];
@@ -116,7 +117,7 @@ manifest_file = fullfile(runs_root, "demo_cases_manifest.csv");
 writetable(manifest, manifest_file);
 
 disp("========================================");
-disp("All 9 demo datasets prepared successfully.");
+disp("All 12 demo datasets prepared successfully.");
 disp("Manifest: " + string(manifest_file));
 disp("========================================");
 

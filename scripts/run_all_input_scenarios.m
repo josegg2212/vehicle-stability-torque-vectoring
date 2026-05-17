@@ -4,6 +4,16 @@
 clc;
 close all;
 
+%% Locate project root and initialize
+this_script = mfilename("fullpath");
+scripts_folder = fileparts(this_script);
+project_root = fileparts(scripts_folder);
+
+cd(project_root);
+addpath(scripts_folder);
+
+run(fullfile(project_root, "init", "init_project_final.m"));
+
 %% Project configuration
 config = project_config();
 model_name = config.model_name;
@@ -13,6 +23,7 @@ scenario_list = [
     "double_lane_change"
     "aggressive_corner"
     "low_mu_lane_change"
+    "high_speed_low_mu_slalom"
 ];
 %% Control cases
 % 0 = without control
@@ -52,7 +63,7 @@ for i = 1:numel(scenario_list)
         disp("========================================");
 
         %% Load selected scenario
-        run(fullfile(fileparts(mfilename("fullpath")), "init_full_system_scenario.m"));
+        run(fullfile(scripts_folder, "init_full_system_scenario.m"));
 
         %% Send control case to Simulink workspace
         assignin("base", "control_case", control_case);
@@ -76,7 +87,7 @@ for i = 1:numel(scenario_list)
         writetable(input_metrics, individual_metrics_file);
 
         %% Accumulate metrics
-        all_input_metrics = [all_input_metrics; input_metrics];
+        all_input_metrics = [all_input_metrics; input_metrics]; %#ok<AGROW>
 
     end
 

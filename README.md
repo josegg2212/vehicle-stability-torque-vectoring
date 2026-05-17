@@ -1,146 +1,179 @@
 # vehicle-stability-torque-vectoring
 
-Proyecto final de control integrado de estabilidad y reparto de par para un vehiculo electrico de cuatro motores sobre el modelo `full_system.slx`.
+## 1) Objetivo
 
-## Resumen
+Este proyecto implementa y compara control de estabilidad y torque vectoring en un vehiculo electrico con traccion en las cuatro ruedas, usando MATLAB/Simulink.
 
-El proyecto integra:
-- Control de estabilidad en guinada y sideslip.
-- Reparto de par izquierda-derecha para generar momento de guinada.
-- Control lateral simple de seguimiento de referencia `y_ref` mediante `delta_cmd`.
-- Tres escenarios x tres modos de control (9 casos oficiales).
+El objetivo de la entrega final es doble:
+1. Que la simulacion sea tecnicamente coherente (modelo, control y metricas).
+2. Que la presentacion sea interpretable (demo 2D con carretera fija, referencia fija y trayectoria real).
 
-La demo 3D queda aplazada en esta entrega. El foco de validacion y presentacion es 2D + metricas.
+## 2) Arquitectura final
 
-## Estructura de carpetas
+Modelo principal:
+- `full_system.slx`
 
-- `init/`: inicializacion y parametros.
-- `scripts/`: ejecucion de escenarios, metricas, plots y demo 2D.
-- `models/`: modelos auxiliares.
-- `results/full_system/metrics/`: metricas CSV por caso y globales.
-- `results/full_system/plots/`: plots de respuesta por escenario/caso.
-- `results/figures/demos_2D/`: figuras 2D por caso.
+Flujo funcional:
+1. `Scenario Inputs` genera:
+   - `delta_ff` (direccion base del escenario)
+   - `mu` (adherencia)
+   - `T_driver_total`
+   - `y_ref` (referencia lateral)
+2. `Path Tracking Controller` calcula direccion aplicada:
+   - `delta_cmd = sat(rate(delta_ff + delta_fb))`
+   - `delta_fb = K_y * (y_ref - y) - K_psi * psi`
+3. `Vehicle Interface` ejecuta:
+   - modo `without_control` (sin momento de estabilidad)
+   - modo `stability_control` (aplica `Mz_cmd`)
+   - modo `torque_vectoring` (convierte momento a reparto de par por rueda)
+4. `Output Logging` guarda todas las senales necesarias para metricas y visualizacion.
 
-## Escenarios y modos
+Separacion clave de senales:
+- `delta_ff`: entrada base del escenario.
+- `delta_cmd`: direccion final realmente aplicada al vehiculo.
+
+## 3) Evolucion del trabajo
+
+### Fase A: seguimiento lateral basico
+- Se anadio control de seguimiento de `y_ref`.
+- Se incorporo saturacion fisica de direccion y limite de rapidez de giro.
+- Todas las ganancias quedaron en `init/` (sin hardcode en bloques).
+
+### Fase B: coherencia de la demo 2D
+- La carretera se define por escenario y no a partir de la trayectoria real.
+- Se separaron claramente:
+  - geometria de carretera,
+  - referencia lateral,
+  - trayectoria real del vehiculo.
+- El panel de reparto de par se calcula solo desde `T_FL`, `T_FR`, `T_RL`, `T_RR`.
+
+### Fase C: escenarios y comparacion robusta
+- Se mantuvieron los tres escenarios originales.
+- Se anadio `high_speed_low_mu_slalom` para mostrar un caso donde:
+  - `stability_control` no es suficiente,
+  - `torque_vectoring` aporta mejora clara.
+
+### Fase D: limpieza para entrega
+- Se eliminaron modelos y scripts legacy no usados.
+- Se reviso calidad de codigo (`checkcode`) en scripts activos.
+- Se regeneraron resultados y figuras de comparacion.
+
+## 4) Escenarios y modos
 
 Escenarios:
 - `double_lane_change`
 - `aggressive_corner`
 - `low_mu_lane_change`
+- `high_speed_low_mu_slalom`
 
-Modos:
+Modos de control:
 - `0 = without_control`
 - `1 = stability_control`
 - `2 = torque_vectoring`
 
-Interpretacion de modos:
-- `without_control`: sin momento corrector (`Mz_cmd_to_use=0`) y reparto simetrico base.
-- `stability_control`: control de estabilidad activo (momento corrector).
-- `torque_vectoring`: control de estabilidad + allocator de par izquierda/derecha.
+Interpretacion correcta:
+- `without_control` no significa "sin seguir referencia"; el path tracking sigue activo. Significa "sin estabilidad adicional ni torque vectoring".
+- `stability_control` agrega control de yaw (`Mz_cmd`).
+- `torque_vectoring` agrega reparto asimetrico de par para generar yaw adicional (`Mz_applied`).
 
-## Path Tracking Controller
+## 5) Resultados globales (12 casos)
 
-Bloque nuevo en `full_system.slx`: `Path Tracking Controller`.
-
-Ley usada:
-- `delta_cmd = sat(rate(delta_ff + K_y*(y_ref-y) - K_psi*psi))`
-
-Parametros:
-- `init/init_path_tracking_controller.m`
-
-Logging separado:
-- `logs_delta_ff` (direccion feedforward de escenario)
-- `logs_delta_cmd` (direccion final aplicada)
-
-## Flujo de ejecucion (presentacion, sin 3D)
-
-1. `run('init/init_project_final.m')`
-2. `run('run_all_full_system_scenarios.m')`
-3. `run('scripts/prepare_all_demos_2D_3D.m')`
-4. `run('scripts/run_all_demos_visualization.m')`
-
-Notas:
-- Aunque el script de preparacion tambien genera datos 3D, la evaluacion de esta entrega se hace solo con 2D.
-- Las metricas consolidadas quedan en:
-  - `results/full_system/metrics/all_full_system_metrics.csv`
-
-## Resultados finales (9 casos)
-
-Fuente de la tabla: ultima corrida de validacion (16-May-2026) con `run_all_full_system_scenarios.m`.
-Si necesitas regenerar exactamente estos datos, ejecuta de nuevo:
-- `run('init/init_project_final.m')`
-- `run('run_all_full_system_scenarios.m')`
+Archivo fuente:
+- `results/full_system/metrics/all_full_system_metrics.csv`
 
 Metricas clave:
-- `rms_y_error_m`: error lateral RMS.
-- `max_abs_y_error_m`: error lateral maximo absoluto.
-- `max_abs_beta_deg`: sideslip maximo absoluto.
-- `max_abs_r_rad_s`: yaw-rate maximo absoluto.
-- `max_abs_ay_m_s2`: aceleracion lateral maxima absoluta.
-- `max_abs_Mz_applied_Nm`: momento aplicado maximo.
-- `max_abs_torque_difference_RL_Nm`: diferencia de par lateral maxima (indicador de torque vectoring).
+- `rms_y_error_m`
+- `max_abs_y_error_m`
+- `max_abs_beta_deg`
+- `max_abs_r_rad_s`
+- `max_abs_Mz_applied_Nm`
+- `max_abs_torque_difference_RL_Nm`
 
-### Tabla comparativa completa (9 casos)
+| Scenario | Mode | RMS e_y [m] | Max abs e_y [m] | Max abs beta [deg] | Max abs r [rad/s] | Max abs Mz_applied [Nm] | Max abs DeltaT_lr [Nm] |
+|---|---|---:|---:|---:|---:|---:|---:|
+| double_lane_change | without_control | 2.017 | 4.556 | 2.484 | 0.521 | 0 | 0 |
+| double_lane_change | stability_control | 1.161 | 2.938 | 1.387 | 0.511 | 9101 | 0 |
+| double_lane_change | torque_vectoring | 1.092 | 2.881 | 3.283 | 0.499 | 11644 | 5123 |
+| aggressive_corner | without_control | 5.655 | 12.400 | 1.681 | 0.278 | 0 | 0 |
+| aggressive_corner | stability_control | 0.910 | 1.342 | 1.024 | 0.207 | 10282 | 0 |
+| aggressive_corner | torque_vectoring | 0.966 | 1.423 | 1.651 | 0.237 | 9162 | 4031 |
+| low_mu_lane_change | without_control | 26.544 | 111.442 | 29.275 | 0.448 | 0 | 0 |
+| low_mu_lane_change | stability_control | 1.398 | 3.113 | 3.408 | 0.517 | 7742 | 0 |
+| low_mu_lane_change | torque_vectoring | 1.335 | 3.064 | 5.195 | 0.494 | 7742 | 3406 |
+| high_speed_low_mu_slalom | without_control | 105.816 | 325.567 | 268.013 | 0.630 | 0 | 0 |
+| high_speed_low_mu_slalom | stability_control | 60.577 | 450.482 | 352.590 | 4.792 | 10492 | 0 |
+| high_speed_low_mu_slalom | torque_vectoring | 1.677 | 5.395 | 5.297 | 0.539 | 10492 | 4616 |
 
-| Scenario | Mode | RMS e_y [m] | Max abs e_y [m] | Max abs beta [deg] | Max abs r [rad/s] | Max abs a_y [m/s^2] | Max abs Mz_applied [Nm] | Max abs DeltaT_lr [Nm] |
-|---|---|---:|---:|---:|---:|---:|---:|---:|
-| double_lane_change | without_control | 2.017 | 4.556 | 2.484 | 0.521 | 8.829 | 0 | 0 |
-| double_lane_change | stability_control | 1.161 | 2.938 | 1.387 | 0.511 | 8.829 | 9101 | 0 |
-| double_lane_change | torque_vectoring | 1.092 | 2.881 | 3.283 | 0.499 | 8.829 | 11644 | 5123 |
-| aggressive_corner | without_control | 5.655 | 12.400 | 1.681 | 0.278 | 7.023 | 0 | 0 |
-| aggressive_corner | stability_control | 0.910 | 1.342 | 1.024 | 0.207 | 3.633 | 10282 | 0 |
-| aggressive_corner | torque_vectoring | 0.966 | 1.423 | 1.651 | 0.237 | 6.101 | 9162 | 4031 |
-| low_mu_lane_change | without_control | 26.544 | 111.442 | 29.275 | 0.448 | 8.829 | 0 | 0 |
-| low_mu_lane_change | stability_control | 1.398 | 3.113 | 3.408 | 0.517 | 8.829 | 7742 | 0 |
-| low_mu_lane_change | torque_vectoring | 1.335 | 3.064 | 5.195 | 0.494 | 8.829 | 7742 | 3406 |
+## 6) Interpretacion tecnica por escenario
 
-### Comparacion por escenario (respecto a without_control)
+### double_lane_change
+- `without_control`: mas oscilacion lateral y mas error.
+- `stability_control`: reduce claramente deriva y oscilacion.
+- `torque_vectoring`: mejora adicional ligera y muestra reparto de par.
 
-#### double_lane_change
-- `stability_control`:
-  - RMS e_y: `-42.4%`
-  - Max |beta|: `-44.2%`
-  - Max |r|: `-1.9%`
-- `torque_vectoring`:
-  - RMS e_y: `-45.9%` (mejor tracking lateral)
-  - Max |r|: `-4.2%`
-  - Max |beta| sube frente a without (`+32.2%`), por mayor agresividad del control lateral + reparto.
+### aggressive_corner
+- Escenario centrado en giro sostenido, no en cambio de carril puro.
+- `stability_control` controla bien `r` y `beta`.
+- `torque_vectoring` mantiene comportamiento comparable y con accion de reparto.
 
-#### aggressive_corner
-- `stability_control`:
-  - RMS e_y: `-83.9%`
-  - Max |beta|: `-39.1%`
-  - Max |r|: `-25.7%`
-- `torque_vectoring`:
-  - RMS e_y: `-82.9%`
-  - Max |beta|: `-1.8%`
-  - Max |r|: `-14.9%`
-- En este escenario, el caso mas robusto es `stability_control`.
+### low_mu_lane_change
+- La baja adherencia penaliza fuerte el caso `without_control`.
+- `stability_control` recupera gran parte de estabilidad.
+- `torque_vectoring` aporta mejor seguimiento lateral y momento de guiada efectivo.
 
-#### low_mu_lane_change
-- `stability_control`:
-  - RMS e_y: `-94.7%`
-  - Max |beta|: `-88.4%`
-  - Max |r|: `+15.3%` (respuesta de guinada mas activa en baja adherencia).
-- `torque_vectoring`:
-  - RMS e_y: `-95.0%` (mejor tracking lateral)
-  - Max |beta|: `-82.3%`
-  - Max |r|: `+10.3%`
-- Con baja adherencia, ambos controladores son muy superiores a without; `torque_vectoring` mejora ligeramente el tracking lateral y muestra reparto de par, `stability_control` mantiene menor pico de beta.
+### high_speed_low_mu_slalom
+- Escenario de validacion exigente.
+- `stability_control` solo no mantiene trayectoria con calidad suficiente.
+- `torque_vectoring` marca la diferencia: reduce mucho el error lateral y estabiliza.
 
-## Lectura corta para presentacion/memoria
+## 7) Demo 2D
 
-- `without_control`: peor caso en los 3 escenarios; en `low_mu` se degrada claramente.
-- `stability_control`: caso mas solido para estabilidad pura (beta/r), especialmente en `aggressive_corner`.
-- `torque_vectoring`: aporta reparto lateral de par visible y mejora tracking lateral en lane-change, con compromiso de picos de beta en algunos casos.
+Las figuras 2D se guardan en:
+- `results/figures/demos_2D/<scenario>/<scenario>_<mode>_trajectory.png`
 
-## Demo 2D lista para defensa
+Las comparativas por escenario se guardan en:
+- `results/full_system/comparisons/<scenario>_vehicle_comparison.png`
 
-Las figuras finales por caso se guardan en:
-- `results/figures/demos_2D/<scenario>/<scenario>_<case>_trajectory.png`
+Principios visuales usados:
+- carretera fija por escenario,
+- referencia fija del escenario,
+- trayectoria real de simulacion,
+- panel de par coherente con los torques de rueda.
 
-La demo 2D:
-- usa carretera fija por escenario,
-- dibuja referencia fija (`y_ref`) y trayectoria real del vehiculo,
-- muestra panel de reparto de par consistente con `T_FL/T_FR/T_RL/T_RR`,
-- incluye resumen de metricas clave para interpretacion rapida.
+## 8) Ejecucion
+
+Secuencia recomendada para entrega (2D + metricas):
+1. `run('init/init_project_final.m')`
+2. `run('run_all_full_system_scenarios.m')`
+3. `run('scripts/run_all_input_scenarios.m')`
+4. `run('scripts/prepare_all_demos_2D_3D.m')`
+5. `run('scripts/run_all_demos_visualization.m')`
+6. `run('scripts/run_all_vehicle_comparisons.m')`
+
+Nota:
+- La parte 3D queda opcional para esta entrega. El flujo principal evaluado es el de metricas y demo 2D.
+
+## 9) Estructura limpia del repositorio
+
+- `full_system.slx`: modelo principal de simulacion.
+- `init/`: parametros del vehiculo, controladores y configuracion.
+- `scripts/`: ejecucion batch, escenarios, metricas, exportes y visualizacion.
+- `models/`: modelo auxiliar opcional para 3D (`demo_3D_unreal.slx`).
+- `results/`: resultados de simulacion, metricas y figuras.
+
+Nomenclatura de scripts:
+- Los nombres siguen formato funcional directo: `run_*`, `prepare_*`, `plot_*`, `compute_*`, `init_*`.
+- Se han retirado aliases y scripts de pruebas antiguas para evitar ambiguedad.
+- Los unicos nombres historicos mantenidos son `P1_parametros_IONIQ5N.m` y `P2_parametros_IONIQ5N.m` porque representan bloques de parametros originales del vehiculo.
+
+Elementos legacy eliminados (no funcionales):
+- modelos legacy de controlador/planta separados,
+- scripts de desarrollo obsoletos,
+- caches de compilacion y ficheros temporales.
+
+## 10) Estado final de entrega
+
+- Funcionalidad validada sin cambiar el comportamiento deseado.
+- Escenarios y modos listos para presentacion y memoria.
+- Codigo y estructura depurados para evitar contenido legacy.
+- Documentacion unificada y coherente con resultados.
