@@ -55,6 +55,11 @@ y_ref_ts = timeseries(y_ref_values, t);
 
 %% Variables for Simulink
 Vx0 = scenario.Vx0;
+if isfield(scenario, "y0")
+    y0 = scenario.y0;
+else
+    y0 = 0;
+end
 
 % Scenario-dependent path-tracking gains.
 if scenario_name == "aggressive_corner"
@@ -78,6 +83,7 @@ assignin("base", "y_ref_ts", y_ref_ts);
 assignin("base", "Tend", Tend);
 assignin("base", "Ts", Ts);
 assignin("base", "Vx0", Vx0);
+assignin("base", "y0", y0);
 assignin("base", "K_y_active", K_y_active);
 assignin("base", "K_psi_active", K_psi_active);
 
@@ -90,4 +96,5 @@ disp(" - T_driver_total_ts");
 disp(" - Tend");
 disp(" - Ts");
 disp(" - Vx0");
+disp(" - y0");
 disp(" - y_ref_ts");

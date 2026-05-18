@@ -168,7 +168,9 @@ annotation(fig, "textbox", [0.70 0.50 0.29 0.05], ...
     "Interpreter", "none", ...
     "HorizontalAlignment", "center");
 
-frame_step = 5;
+% Paso de animación
+target_frames = 70;   % Más bajo = más rápido, más alto = más suave
+frame_step = max(1, ceil(N / target_frames));
 max_side_torque = 1.2 * max(1, max(abs([T_left_total T_right_total])));
 max_wheel_torque = 1.25 * max(1, max(abs([T_FL T_FR T_RL T_RR])));
 k_end = get_animation_end_index(x, road_scene);
@@ -267,7 +269,7 @@ for k = 1:frame_step:k_end
     plot(axWheel, [0.5 4.5], [0 0], "k", "LineWidth", 1);
 
     set(status_box, "String", status_text, "BackgroundColor", status_color);
-    drawnow;
+    drawnow limitrate;
 
     if ~isempty(video_writer)
         writeVideo(video_writer, getframe(fig));

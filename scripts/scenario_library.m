@@ -8,15 +8,17 @@ switch string(scenario_name)
         scenario.Tend = 12;
         scenario.Ts = 0.01;
         scenario.Vx0 = 23;
+        scenario.y0 = 3.0;
 
+        % Double lane change between lanes: left -> right -> left.
         scenario.t_delta = [0 1.0 2.0 3.0 4.3 12.0];
-        scenario.delta_deg = [0 3.8 -4.6 2.5 0 0];
+        scenario.delta_deg = [0 -3.8 4.6 -2.5 0 0];
 
         scenario.t_mu = [0 12];
         scenario.mu = [0.9 0.9];
 
-        [scenario.t_y_ref, scenario.y_ref] = build_lane_change_reference( ...
-            scenario.Tend, scenario.Ts, 3.5, 1.1, 2.4, 3.1, 4.9);
+        [scenario.t_y_ref, scenario.y_ref] = build_double_lane_change_between_lanes_reference( ...
+            scenario.Tend, scenario.Ts, 3.0, 1.1, 2.4, 3.1, 4.9);
 
         scenario.T_driver_total = 1200;
 
@@ -31,18 +33,19 @@ switch string(scenario_name)
         scenario.Tend = 12;
         scenario.Ts = 0.01;
         scenario.Vx0 = 21;
+        scenario.y0 = 3.0;
 
-        scenario.t_delta = [0 1.1 2.2 3.2 4.6 12.0];
-        scenario.delta_deg = [0 3.2 -3.8 2.1 0 0];
-
+        scenario.t_delta = [0 1.1 2.2 3.2 12.0];
+        scenario.delta_deg = [0 -3.2 3.8 0 0];
+    
         scenario.t_mu = [0 2.0 3.8 8.5 12.0];
         scenario.mu = [0.9 0.9 0.45 0.45 0.9];
-
-        [scenario.t_y_ref, scenario.y_ref] = build_lane_change_reference( ...
-            scenario.Tend, scenario.Ts, 3.5, 1.1, 2.4, 3.1, 4.9);
-
+    
+        [scenario.t_y_ref, scenario.y_ref] = build_single_lane_change_between_lanes_reference( ...
+            scenario.Tend, scenario.Ts, 3.0, 1.1, 2.4);
+    
         scenario.T_driver_total = 1200;
-
+    
         scenario.x_ref = scenario.Vx0 * scenario.t_y_ref;
         scenario.y_ref_path = scenario.y_ref;
         scenario.road_x = linspace(0, scenario.Vx0 * scenario.Tend + 40, 800);
@@ -117,6 +120,25 @@ t_ref = (0:Ts:Tend)';
 s_up = smoothstep(t_ref, t_up0, t_up1);
 s_down = smoothstep(t_ref, t_down0, t_down1);
 y_ref = lane_shift * (s_up - s_down);
+t_ref_row = t_ref';
+y_ref_row = y_ref';
+end
+
+function [t_ref_row, y_ref_row] = build_double_lane_change_between_lanes_reference( ...
+    Tend, Ts, lane_offset, t_right0, t_right1, t_left0, t_left1)
+t_ref = (0:Ts:Tend)';
+s_to_right = smoothstep(t_ref, t_right0, t_right1);
+s_back_left = smoothstep(t_ref, t_left0, t_left1);
+y_ref = lane_offset - 2*lane_offset*s_to_right + 2*lane_offset*s_back_left;
+t_ref_row = t_ref';
+y_ref_row = y_ref';
+end
+
+function [t_ref_row, y_ref_row] = build_single_lane_change_between_lanes_reference( ...
+    Tend, Ts, lane_offset, t_right0, t_right1)
+t_ref = (0:Ts:Tend)';
+s_to_right = smoothstep(t_ref, t_right0, t_right1);
+y_ref = lane_offset - 2*lane_offset*s_to_right;
 t_ref_row = t_ref';
 y_ref_row = y_ref';
 end
